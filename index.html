@@ -1,0 +1,2899 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" id="metaTema" content="#f8fafc">
+<!-- La CSP vieta qualunque risorsa esterna: l'app non può comunicare in rete
+     anche per errore. Per la pubblicazione si aprono soltanto manifest e
+     service worker, che restano nella stessa origine del sito -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; manifest-src 'self'; worker-src 'self'">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232b5f9e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1'/><path d='M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4'/></svg>">
+<!-- Il pacchetto PWA: dichiarato quando l'app è pubblicata su un sito.
+     In anteprima o da file locale i file non ci sono e non succede nulla -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Cunto">
+<title>Cunto de li Cunti</title>
+<style>
+  /* ============ Base ============ */
+  /* Palette «Blu notte»: di giorno chiara, di notte quella del piano.
+     light-dark() sceglie la tinta secondo il color-scheme: di default
+     segue il sistema, l'interruttore nelle Impostazioni forza lo scuro */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --verde: light-dark(#157a4a, #54c08d); --rosso: light-dark(#c0392b, #e27263);
+    --neutro: light-dark(#5b6b7e, #8296ab);
+    --bordo: light-dark(#e2e8f0, #243140); --sfondo: light-dark(#f8fafc, #0f141a);
+    --carta: light-dark(#fff, #151e28); --accento: light-dark(#2b5f9e, #6aa5e0);
+    --testo: light-dark(#1e293b, #dfe8f1); --tenue: light-dark(#eaf1f9, #1c2b3a);
+    --linea-giorno: light-dark(#cbd5e1, #33475c);
+    /* Slot colore delle categorie nella torta: uno per riga, assegnato alla
+       nascita di ogni categoria e mai più cambiato, così i colori restano
+       riconoscibili da un periodo all'altro. La tinta avanza dell'angolo
+       aureo (137,5°) a ogni slot: 21 colori tutti diversi e sparsi attorno
+       al cerchio, così due categorie vicine non si somigliano mai */
+    --cat-1: light-dark(hsl(0 45% 48%), hsl(0 50% 62%));
+    --cat-2: light-dark(hsl(138 45% 58%), hsl(138 50% 70%));
+    --cat-3: light-dark(hsl(275 45% 48%), hsl(275 50% 62%));
+    --cat-4: light-dark(hsl(53 45% 58%), hsl(53 50% 70%));
+    --cat-5: light-dark(hsl(190 45% 48%), hsl(190 50% 62%));
+    --cat-6: light-dark(hsl(328 45% 58%), hsl(328 50% 70%));
+    --cat-7: light-dark(hsl(105 45% 48%), hsl(105 50% 62%));
+    --cat-8: light-dark(hsl(243 45% 58%), hsl(243 50% 70%));
+    --cat-9: light-dark(hsl(20 45% 48%), hsl(20 50% 62%));
+    --cat-10: light-dark(hsl(158 45% 58%), hsl(158 50% 70%));
+    --cat-11: light-dark(hsl(295 45% 48%), hsl(295 50% 62%));
+    --cat-12: light-dark(hsl(73 45% 58%), hsl(73 50% 70%));
+    --cat-13: light-dark(hsl(210 45% 48%), hsl(210 50% 62%));
+    --cat-14: light-dark(hsl(348 45% 58%), hsl(348 50% 70%));
+    --cat-15: light-dark(hsl(125 45% 48%), hsl(125 50% 62%));
+    --cat-16: light-dark(hsl(263 45% 58%), hsl(263 50% 70%));
+    --cat-17: light-dark(hsl(40 45% 48%), hsl(40 50% 62%));
+    --cat-18: light-dark(hsl(178 45% 58%), hsl(178 50% 70%));
+    --cat-19: light-dark(hsl(315 45% 48%), hsl(315 50% 62%));
+    --cat-20: light-dark(hsl(93 45% 58%), hsl(93 50% 70%));
+    --cat-21: light-dark(hsl(230 45% 48%), hsl(230 50% 62%));
+    /* Tinte della barra a segmenti dei budget: una scala di blu ricavata
+       dall'accento, NON gli slot della torta di Analisi (scelta di Daniele:
+       qui il colore va per posizione, non per categoria, e quando le tinte
+       finiscono si ricomincia — possono anche ripetersi) */
+    --bud-1: var(--accento);
+    --bud-2: color-mix(in srgb, var(--accento) 70%, var(--sfondo));
+    --bud-3: color-mix(in srgb, var(--accento) 45%, var(--sfondo));
+    --bud-4: color-mix(in srgb, var(--accento) 25%, var(--sfondo));
+    color-scheme: light dark;
+  }
+  html[data-scuro] { color-scheme: dark; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--sfondo); color: var(--testo); font-size: 16px;
+    -webkit-tap-highlight-color: transparent;
+    font-variant-numeric: tabular-nums;   /* cifre allineate, sempre */
+  }
+  /* manipulation: scroll verticale e zoom a due dita restano nativi del browser,
+     i gesti orizzontali sono dell'app (swipe dei periodi). Con "pan-y pinch-zoom"
+     Chrome, dopo uno swipe gestito dalla pagina, sopprime il click del primo
+     tocco (lo tocca ri-toccare): "manipulation" non lo fa. Si perde solo lo
+     zoom a doppio tap, che qui non serve.
+     overflow-x: clip — il contenuto che entra da destra sfora di 46px per un attimo:
+     senza il clip la pagina diventerebbe scrollabile di lato e la fascia fissa in
+     basso (fascia 4) sparirebbe e riapparirebbe a ogni entrata da destra */
+  #app { max-width: 480px; margin: 0 auto; min-height: 100vh; padding-bottom: 88px;
+         touch-action: manipulation; overflow-x: clip; }
+  /* Foglio "nuovo movimento": sale dal basso sopra la pagina precedente */
+  .sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+    max-width: 480px; margin: 0 auto;
+    background: var(--carta); border-radius: 20px 20px 0 0;
+    box-shadow: 0 -8px 28px light-dark(rgba(15, 23, 42, .16), rgba(0, 0, 0, .55));
+    max-height: 92vh; overflow-y: auto;
+    padding-bottom: max(14px, env(safe-area-inset-bottom));
+  }
+  .sheet.entra { animation: sale-su .2s ease-out; }
+  @keyframes sale-su { from { transform: translateY(100%); } }
+  /* Cambio sezione: il contenuto entra rapido dalla direzione dello swipe */
+  .pagina-corpo.entra-dx { animation: scorre-da-dx .2s ease-out; }
+  .pagina-corpo.entra-sx { animation: scorre-da-sx .2s ease-out; }
+  @keyframes scorre-da-dx { from { transform: translateX(46px); opacity: .4; } }
+  @keyframes scorre-da-sx { from { transform: translateX(-46px); opacity: .4; } }
+  /* Cambio periodo: anche l'etichetta accompagna il movimento, piccola e leggera */
+  .etichetta-periodo.entra-dx { animation: etichetta-da-dx .2s ease-out; }
+  .etichetta-periodo.entra-sx { animation: etichetta-da-sx .2s ease-out; }
+  @keyframes etichetta-da-dx { from { transform: translateX(14px); opacity: 0; } }
+  @keyframes etichetta-da-sx { from { transform: translateX(-14px); opacity: 0; } }
+  button { font-family: inherit; cursor: pointer; }
+  input { font-family: inherit; font-size: 16px; color: inherit; }
+
+  /* ============ Fascia 1: selettore periodo ============ */
+  /* Testata fissa: barra del periodo e riepilogo restano in cima anche scrollando.
+     z-index sopra il menù in basso, così il tappeto del menù di chiusura lo copre */
+  .testa-fissa { position: sticky; top: 0; z-index: 12; background: var(--sfondo); }
+  .fascia1 {
+    position: relative;   /* il menù di chiusura pende da qui */
+    background: var(--sfondo);
+    border-bottom: 1px solid var(--bordo);
+    display: flex; align-items: center;
+    padding: 10px 12px;
+  }
+  /* Il gruppo frecce+scritta sta esattamente al centro della fascia INTERA e
+     non della parte che avanza dopo il ⋮: così la scritta è perfettamente
+     centrata e le frecce le stanno accanto, equidistanti. Il gruppo copre
+     tutta la fascia in overlay: pointer-events none sul contenitore e auto
+     sui soli pulsanti, perché il ⋮ sotto resti toccabile */
+  .fascia1 .nav-periodo {
+    position: absolute; left: 0; top: 0; bottom: 0; right: 0;
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: none;
+  }
+  .fascia1 .nav-periodo * { pointer-events: auto; }
+  .btn-freccia {
+    background: none; border: none; font-size: 22px; color: var(--accento);
+    padding: 10px 14px; border-radius: 8px;
+  }
+  .btn-freccia:active { background: color-mix(in srgb, currentColor 8%, transparent); }
+  .etichetta-periodo { font-weight: 600; font-size: 15px; }
+  .btn-puntini {
+    background: none; border: none; font-size: 22px; padding: 10px;
+    border-radius: 8px; color: var(--neutro); font-weight: 700;
+    margin-left: auto;
+  }
+  /* Freccia inibita ai limiti della navigazione (periodo aperto / più vecchio) */
+  .btn-freccia.fermo { opacity: .25; pointer-events: none; }
+  /* La parola "oggi" del periodo aperto: pulsante che apre il menù di chiusura */
+  .btn-oggi {
+    background: none; border: none; color: var(--accento);
+    font-weight: 700; font-size: 15px; padding: 0; font-family: inherit;
+  }
+  /* Menù di chiusura del periodo: pende dalla fascia 1 (solo Libero) */
+  .fascia1.con-menu { z-index: 12; }
+  .menu-chiusura {
+    position: absolute; top: 100%; right: 12px; margin-top: 4px; z-index: 12;
+    background: var(--carta); border-radius: 0;
+    box-shadow: 0 10px 28px light-dark(rgba(15, 23, 42, .18), rgba(0, 0, 0, .6));
+    min-width: 215px; overflow: hidden;
+  }
+  /* Le voci dei due menù a tendina (chiusura periodo e puntini) sono le
+     stesse: le regole si scrivono una volta sola */
+  .menu-chiusura button, .menu-locale button {
+    display: block; width: 100%; min-height: 46px; padding: 12px 16px;
+    background: none; border: none; border-bottom: 1px solid var(--bordo);
+    font-size: 15px; font-weight: 500; color: var(--testo); text-align: left;
+    transition: background .1s;
+  }
+  .menu-chiusura button:last-child, .menu-locale button:last-child { border-bottom: none; }
+  .menu-chiusura button:active, .menu-locale button:active { background: color-mix(in srgb, currentColor 8%, transparent); }
+  /* Tappeto invisibile: chiude il menù toccando fuori */
+  .tappeto-menu { position: fixed; inset: 0; z-index: 11; }
+  /* Menù locale dei tre puntini (categorie e budget): stesso vestito del
+     menù di chiusura, ma pende dal punto toccato. Sta SOPRA il foglio
+     Impostazioni (z-index 40), perché da lì si aprono i menù di categoria */
+  .tappeto-menu.sopra { z-index: 41; }
+  .menu-locale {
+    position: fixed; z-index: 42; min-width: 215px; overflow: hidden;
+    background: var(--carta); border-radius: 0;
+    box-shadow: 0 10px 28px light-dark(rgba(15, 23, 42, .18), rgba(0, 0, 0, .6));
+  }
+  .menu-locale button.pericoloso { color: var(--rosso); font-weight: 700; }
+
+  /* ============ Fascia 2: riepilogo ============ */
+  .kpi { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; padding: 12px; }
+  .kpi2 { grid-template-columns: 1fr 1fr; }
+  .kpi .casella { padding: 10px 6px; text-align: center; }
+  .kpi .casella .titolo { font-size: 11px; color: var(--neutro); text-transform: uppercase; letter-spacing: .5px; }
+  .kpi .casella .valore { font-size: 16px; font-weight: 700; margin-top: 4px; white-space: nowrap; }
+  .verde { color: var(--verde); } .rosso { color: var(--rosso); } .neutro { color: var(--neutro); }
+
+  /* ============ Corpo principale ============ */
+  .corpo { padding: 4px 12px 12px; }
+  .giorno {
+    font-size: 12px; font-weight: 700; color: var(--neutro);
+    text-transform: uppercase; letter-spacing: .5px; margin: 20px 2px 6px; padding-top: 10px;
+    border-top: 2px solid var(--linea-giorno);
+  }
+  /* Il primo gruppo del giorno non ha il filo sopra: la pagina comincia qui */
+  .corpo .giorno:first-child { border-top: none; padding-top: 0; }
+  .mov {
+    display: flex; align-items: center; gap: 10px;
+    padding: 13px 2px; border-bottom: 1px solid var(--bordo);
+    transition: background .1s;
+  }
+  .mov:active { background: color-mix(in srgb, currentColor 8%, transparent); }
+  /* L'ultimo movimento del giorno non porta il filo sotto: il confine lo fa
+     già il separatore del giorno dopo, la linea non si raddoppia */
+  .mov:has(+ .giorno) { border-bottom: none; }
+  .mov .icona-mov { width: 30px; flex: none; }
+  .mov .info { flex: 1; min-width: 0; }
+  .mov .titolo { font-weight: 600; font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mov .sotto { font-size: 12px; color: var(--neutro); margin-top: 2px; }
+  .mov .importo { font-weight: 700; font-size: 15px; white-space: nowrap; }
+  .vuoto { text-align: center; color: var(--neutro); padding: 40px 20px; font-size: 14px; }
+
+  /* ============ Fascia 4: menu inferiore ============ */
+  .nav-basso {
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 480px;
+    display: grid; grid-template-columns: 1fr 1fr 1fr 1fr;
+    background: var(--sfondo);
+    padding: 6px 0 max(6px, env(safe-area-inset-bottom)); z-index: 10;
+  }
+  .nav-basso button {
+    background: none; border: none; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 2px; font-size: 11px;
+    color: var(--neutro); padding: 6px 0; min-height: 44px; transition: background .1s;
+  }
+  .nav-basso button.attivo { background: var(--tenue); color: var(--accento); font-weight: 700; }
+  .nav-basso button .icona { font-size: 22px; }
+  /* Il ＋ è l'ultimo elemento della barra, piatto come gli altri: fondo
+     tenue e segno blu, niente cerchio */
+  .nav-basso button.piu { background: var(--tenue); }
+  .nav-basso button.piu .icona { color: var(--accento); font-size: 22px; }
+
+  /* ============ Form movimento ============ */
+  .intestazione-pagina {
+    display: flex; align-items: center; gap: 8px; padding: 12px;
+    border-bottom: 1px solid var(--bordo);
+  }
+  .intestazione-pagina h2 { font-size: 17px; flex: 1; }
+  .importo-display {
+    font-size: 34px; font-weight: 700; text-align: right; padding: 10px 16px 6px;
+    font-variant-numeric: tabular-nums;
+  }
+  .nota-attaccata { margin: 0; }
+  .nota-attaccata input {
+    width: 100%; padding: 12px; border: none; border-bottom: 1px solid var(--bordo);
+    background: none; font-size: 15px;
+  }
+  .tastierino { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 4px; padding: 0 12px; margin-top: 10px; }
+  .tastierino button {
+    font-size: 22px; font-weight: 600; padding: 14px 0; border-radius: 0;
+    border: none; background: none; transition: background .1s;
+  }
+  /* Operatori e ⌫: unico fondo del tastierino, tutto il resto è piatto */
+  .tastierino button.op { background: var(--tenue); color: var(--accento); }
+  .tastierino button:active { background: color-mix(in srgb, currentColor 8%, transparent); }
+  .sezioni-form { padding: 16px 12px; display: flex; flex-direction: column; gap: 14px; }
+  .campo .etichetta-campo { font-size: 12px; font-weight: 700; color: var(--neutro); text-transform: uppercase; margin-bottom: 6px; }
+  .toggle-direzione { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .toggle-direzione button {
+    padding: 10px; border-radius: 999px; border: none;
+    background: none; font-weight: 700; color: var(--neutro); font-size: 15px;
+    transition: background .1s;
+  }
+  /* La direzione si dice col colore del testo, non col bordo: il fondo è una
+     tinta leggera del colore, solo sulla selezione */
+  .toggle-direzione button.uscita.sel { background: color-mix(in srgb, var(--rosso) 10%, transparent); color: var(--rosso); }
+  .toggle-direzione button.entrata.sel { background: color-mix(in srgb, var(--verde) 10%, transparent); color: var(--verde); }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    padding: 10px 16px; border-radius: 999px; border: none;
+    background: var(--tenue); font-size: 14px; font-weight: 700; color: var(--testo);
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  /* Il grasso è sempre attivo: la selezione non cambia la larghezza e non sposta i vicini */
+  .chip.sel { background: var(--accento); color: light-dark(#fff, #0f172a); }
+  .campo input[type="text"], .campo input[type="number"] {
+    width: 100%; padding: 12px 2px; border-radius: 0; border: none;
+    border-bottom: 1px solid var(--bordo); background: none;
+  }
+  /* La data è un pulsante gemello di quello categoria: apre il calendario da qualsiasi punto */
+  .btn-data {
+    width: 100%; padding: 13px 16px; border-radius: 999px; border: none;
+    background: var(--tenue); font-size: 15px; font-weight: 700; color: var(--testo);
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  }
+  /* Testata del calendario: mese al centro, frecce ai lati */
+  .cal-testata { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .cal-testata .mese { font-size: 15px; font-weight: 700; }
+  /* Calendario: griglia piatta, le celle si toccano come in una tabella */
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0;
+              touch-action: manipulation; }   /* lo swipe del mese non deve finire al browser (e niente click soppressi) */
+  .cal-grid .cal-testa {
+    text-align: center; font-size: 12px; font-weight: 700; color: var(--neutro);
+    padding: 6px 0; border-bottom: 1px solid var(--bordo);
+  }
+  .cal-grid button {
+    padding: 9px 0; min-height: 44px; border: none; border-radius: 0;
+    background: none; font-size: 15px; font-weight: 600; color: var(--testo);
+    transition: background .1s;
+  }
+  .cal-grid button:active { background: color-mix(in srgb, currentColor 8%, transparent); }
+  /* Il giorno scelto è l'unico con un fondo pieno: un cerchio blu */
+  .cal-grid button.oggi { color: var(--accento); font-weight: 700; }
+  .cal-grid button.sel { background: var(--accento); border-radius: 999px; color: light-dark(#fff, #0f172a); font-weight: 700; }
+  /* Giorni fuori dai limiti d'uso (chiusura/modifica periodo): visibili ma non scegliibili */
+  .cal-grid button:disabled { color: light-dark(#cbd5e1, #33475c); background: none; font-weight: 500; }
+  /* Celle vuote (giorni che non ci sono): stesse dimensioni dei bottoni, così il
+     rettangolo del calendario è sempre di 6 settimane, qualunque sia il mese */
+  .cal-grid span:not(.cal-testa) { min-height: 44px; }
+  /* Cambio mese: la griglia scivola come i periodi (stesse keyframes) */
+  .cal-grid.entra-dx { animation: scorre-da-dx .2s ease-out; }
+  .cal-grid.entra-sx { animation: scorre-da-sx .2s ease-out; }
+  .due-colonne { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  /* Pulsante-campo: apre le schermate di scelta */
+  .btn-campo-scelta {
+    width: 100%; padding: 13px 16px; border-radius: 999px; border: none;
+    background: var(--tenue); font-size: 15px; font-weight: 700; color: var(--testo); text-align: left;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .btn-campo-scelta.vuota { color: var(--neutro); font-weight: 500; }
+  .btn-principale {
+    width: 100%; padding: 14px; border-radius: 12px; border: none;
+    background: var(--accento); color: light-dark(#fff, #0f172a); font-size: 16px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn-pericoloso {
+    width: 100%; padding: 13px; border-radius: 12px; border: 2px solid var(--rosso);
+    background: none; color: var(--rosso); font-size: 15px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+
+  /* ============ Analisi ============ */
+  .torta { display: flex; align-items: center; gap: 28px; padding: 18px 0 6px; }
+  .legenda { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+  .legenda .voce { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+  .legenda .voce .pallino { width: 11px; height: 11px; border-radius: 3px; flex: none; }
+  .riga-cat { padding: 12px 2px; cursor: pointer; transition: background .1s; }
+  .riga-cat:active, .riga-conto:active { background: color-mix(in srgb, currentColor 8%, transparent); }
+  .riga-cat .testa, .riga-conto .testa { display: flex; align-items: center; justify-content: space-between; font-size: 15px; font-weight: 600; gap: 8px; }
+  .riga-cat .perc { color: var(--neutro); font-weight: 500; font-size: 13px; white-space: nowrap; }
+  .barra { height: 3px; background: var(--bordo); border-radius: 99px; margin-top: 8px; overflow: hidden; }
+  .barra .riempimento { height: 100%; border-radius: 99px; background: var(--neutro); }
+  /* Barra e percentuale sulla stessa riga: la barra si accorcia per far posto al numero */
+  .riga-barra { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+  .riga-barra .barra { flex: 1; margin-top: 0; }
+  .riga-conto { padding: 12px 2px; border-bottom: 1px solid var(--bordo); min-height: 44px; cursor: pointer; }
+  /* Separatore puramente visivo tra categorie e conti */
+  .separatore { height: 2px; background: var(--linea-giorno); margin: 20px 0; }
+  .banner-filtro {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    background: var(--tenue); border-radius: 999px;
+    padding-left: 14px; margin: 12px 12px 0; font-size: 14px; font-weight: 600; color: var(--accento);
+  }
+  .banner-filtro span { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .banner-filtro button { background: none; border: none; color: var(--accento); font-size: 18px; padding: 12px 16px; }
+
+  /* ============ Budget ============ */
+  .riga-budget { padding: 14px 2px; border-bottom: 1px solid var(--bordo); }
+  /* L'ultimo budget non porta il filo sotto: sotto c'è già il bordo del pulsante */
+  .riga-budget:has(+ .btn-secondario) { border-bottom: none; }
+  .riga-budget .testa { display: flex; align-items: center; gap: 8px; }
+  .riga-budget .testa .nome { font-weight: 700; font-size: 15px; flex: 1; }
+  .riga-budget .testa .tre-punti { background: none; border: none; font-size: 22px; color: var(--neutro); padding: 8px 12px; }
+  .riga-budget .dati { display: flex; gap: 14px; margin-top: 6px; font-size: 13px; color: var(--neutro); }
+  .riga-budget .dati b { color: var(--testo); }
+  /* Barra del budget a segmenti: un pezzo per ogni categoria che ha speso
+     qualcosa, largo come la sua parte del limite; i filetti bianchi tra i
+     pezzi sono i traguardi intermedi */
+  .barra-segmenti { display: flex; gap: 2px; height: 10px; margin-top: 10px;
+                    background: var(--bordo); border-radius: 99px; overflow: hidden; }
+  .barra-segmenti span { height: 100%; background: var(--col, var(--neutro)); }
+  /* Traguardi sotto la barra: da ogni confine un filo scende fino alla riga
+     della sua etichetta e si ferma alla base delle lettere; la scritta sta
+     appena dopo il filo (o prima, se dopo non c'è spazio fino al margine,
+     e allora il suo bordo destro arriva quasi al filo); chi si accavalla
+     con una già posata scende di una riga e il filo si allunga */
+  .traguardi { position: relative; margin-top: 2px; }
+  .traguardi .filo { position: absolute; top: 0; width: 1px; background: var(--neutro); }
+  .traguardi .etichetta { position: absolute; top: 0;
+                    font-size: 10px; line-height: 16px; color: var(--neutro); white-space: nowrap;
+                    padding: 0 3px; background: var(--sfondo); }
+  .traguardi .fine { right: 0; font-weight: 700; }
+  .riga-budget .rimanente { font-size: 13px; margin-top: 4px; color: var(--neutro); }
+  .sforato .rimanente { color: var(--rosso); font-weight: 700; }
+  .sforato .dati b, .sforato .testa .nome { color: var(--rosso); }
+  .sforato .barra-segmenti span { background: var(--rosso); }
+  .btn-secondario {
+    width: 100%; padding: 13px; border-radius: 12px; border: 2px solid var(--accento);
+    background: none; color: var(--accento); font-size: 15px; font-weight: 700; margin-top: 14px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+
+  /* ============ Impostazioni ============ */
+  /* Foglio piatto: gruppi con titolo maiuscolo, niente scatole */
+  .pag-impostazioni { padding: 12px; }
+  .gruppo { margin-bottom: 24px; }
+  .titolo-gruppo { font-size: 12px; font-weight: 700; color: var(--neutro); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+  /* Sezione Categorie/Conti: il titolo è un bottone che la apre e la chiude */
+  .bottone-gruppo { width: 100%; display: flex; align-items: center; justify-content: space-between; background: none; border: none; padding: 0; cursor: pointer; }
+  .bottone-gruppo .ico { transition: transform .2s ease-out; }
+  .bottone-gruppo.aperta .ico { transform: rotate(180deg); }
+  .riga-tema { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; }
+  .riga-tema .nome-opzione { font-size: 15px; font-weight: 600; }
+  /* Righe delle istantanee automatiche nel gruppo Dati, piatte come le altre liste */
+  .riga-backup { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+                 border-bottom: 1px solid var(--bordo); font-size: 13px; color: var(--neutro); }
+  .riga-backup .btn-testo { width: auto; padding: 10px 0; }
+  /* Interruttore del tema scuro: pillola col pallino che scorre */
+  .interruttore {
+    width: 52px; height: 32px; border-radius: 999px; border: none; flex: none;
+    background: var(--bordo); position: relative; transition: background .2s ease-out;
+  }
+  .interruttore::after {
+    content: ""; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px;
+    border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
+    transition: left .2s ease-out;
+  }
+  .interruttore.on { background: var(--accento); }
+  .interruttore.on::after { left: 23px; }
+  .btn-testo {
+    background: none; border: none; color: var(--accento); font-size: 14px; font-weight: 600;
+    padding: 10px 0; display: flex; align-items: center; gap: 8px; width: 100%;
+    text-align: left; min-height: 44px;
+  }
+  .btn-testo.rosso { color: var(--rosso); }
+  .albero .nodo { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--bordo); }
+  .albero .nodo:last-child { border-bottom: none; }
+  .albero .nodo .nome { flex: 1; font-size: 15px; }
+  .albero .tre-punti { background: none; border: none; font-size: 22px; color: var(--neutro); padding: 8px 12px; }
+  .avviso { font-size: 13px; color: var(--neutro); margin-top: 8px; line-height: 1.4; }
+  /* ============ Modifica periodi ============ */
+  .riga-periodo { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; margin-bottom: 10px; }
+  .riga-periodo.aperta { grid-template-columns: 1fr; }
+  .trattino { display: flex; align-items: center; color: var(--neutro); font-weight: 700; }
+  /* Apertura del periodo aperto: sola lettura, identico agli altri */
+  .btn-campo-scelta.fermo { pointer-events: none; cursor: default; }
+
+  /* ============ Modali ============ */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(15, 23, 42, .45);
+    display: none; align-items: flex-end; justify-content: center; z-index: 50;
+  }
+  .overlay.aperto { display: flex; }
+  /* Variante per il calendario: compare al centro, un po' più in alto */
+  .overlay.centrata { align-items: center; padding: 0 16px; }
+  .overlay.centrata .modale {
+    border-radius: 16px; margin-bottom: 14vh; max-width: 400px;
+    padding: 16px 14px max(16px, env(safe-area-inset-bottom));
+  }
+  .modale {
+    background: var(--carta); width: 100%; max-width: 480px;
+    border-radius: 20px 20px 0 0; padding: 18px 16px max(18px, env(safe-area-inset-bottom));
+    max-height: 85vh; overflow-y: auto;
+  }
+  .modale h3 { margin-bottom: 14px; font-size: 17px; }
+  .modale .campo { margin-bottom: 14px; }
+  /* ============ Griglie e liste di scelta (toccabili) ============ */
+  /* Celle piatte: il gap di 1px sul fondo --bordo disegna i filetti tra
+     una cella e l'altra */
+  .griglia-scelta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--bordo); border: 1px solid var(--bordo); }
+  .griglia-scelta button {
+    min-height: 64px; padding: 8px 4px; border-radius: 0; border: none;
+    background: var(--carta); font-size: 12px; font-weight: 600; color: var(--testo);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  }
+  .griglia-scelta button .icona-griglia { display: flex; color: var(--neutro); }
+  .griglia-scelta button.sel { background: var(--tenue); color: var(--accento); }
+  .griglia-scelta button.sel .icona-griglia { color: var(--accento); }
+  /* Griglia delle icone del form categoria/conto: come sopra, sei colonne */
+  .griglia-icone { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1px; background: var(--bordo); border: 1px solid var(--bordo); margin-top: 6px; }
+  .griglia-icone button {
+    min-height: 48px; border-radius: 0; border: none; background: var(--carta);
+    display: flex; align-items: center; justify-content: center; color: var(--testo);
+  }
+  .griglia-icone button.sel { background: var(--accento); color: light-dark(#fff, #0f172a); }
+  /* Sfoglia le pagine del selettore icone: freccette ai lati, contatore al centro */
+  .nav-icone { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; }
+  .nav-icone button { background: none; border: none; font-size: 20px; color: var(--accento); padding: 6px 14px; }
+  .nav-icone button:disabled { opacity: .25; }
+  .nav-icone span { font-size: 12px; color: var(--neutro); font-variant-numeric: tabular-nums; }
+  .lista-scelta { display: flex; flex-direction: column; }
+  .lista-scelta button {
+    padding: 14px 2px; border-radius: 0; border: none; border-bottom: 1px solid var(--bordo);
+    background: none; font-size: 15px; font-weight: 600; color: var(--testo); text-align: left;
+    display: flex; align-items: center; gap: 8px; min-height: 44px;
+  }
+  .lista-scelta button:last-child { border-bottom: none; }
+  .lista-scelta button.sel { color: var(--accento); font-weight: 700; }
+  .azioni-modale { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
+  .azioni-modale .btn-secondario { margin-top: 0; }
+
+  /* ============ Icone (sprite Lucide inline) ============ */
+  .ico {
+    width: 22px; height: 22px; flex: none; vertical-align: middle; fill: none;
+    stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+  }
+  /* Le icone di contorno (righe di lista e simili) stanno spente;
+     altrove seguono il colore del testo che le contiene */
+  .mov .icona-mov .ico, .albero .nodo .ico, .riga-cat .ico, .riga-conto .ico,
+  .icona-budget, .btn-campo-scelta .ico { color: var(--neutro); }
+  .mov .sotto .ico { width: 14px; height: 14px; }
+  .chips .ico { width: 16px; height: 16px; }
+  .banner-filtro .ico, .btn-data .ico, .btn-testo .ico { width: 18px; height: 18px; }
+  /* Toast: conferma corta e galleggiante sopra la barra di navigazione */
+  .toast {
+    position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%);
+    background: light-dark(#1e293b, #dfe8f1); color: light-dark(#fff, #0f141a);
+    font-size: 13px; font-weight: 600; padding: 10px 18px; border-radius: 999px;
+    z-index: 60; pointer-events: none; animation: toast-entra .2s ease-out;
+  }
+  @keyframes toast-entra { from { opacity: 0; transform: translate(-50%, 8px); } }
+  /* Banner di memoria temporanea: fisso sopra la barra di navigazione,
+     appare soltanto se l'archivio del telefono (IndexedDB) non risponde.
+     In teoria non capita mai: se capita, meglio saperlo */
+  .banner-memoria {
+    position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%);
+    width: min(456px, calc(100% - 24px)); z-index: 45;
+    display: flex; align-items: center; gap: 8px;
+    background: var(--tenue); border: 1px solid var(--bordo);
+    border-radius: 16px; padding: 10px 8px 10px 14px;
+    font-size: 13px; line-height: 1.45; color: var(--testo);
+  }
+  .banner-memoria .ico { width: 18px; height: 18px; flex: none; color: var(--rosso); }
+  .banner-memoria strong { font-weight: 700; }
+  .banner-memoria .x-banner {   /* tocco comodo, come tutto il resto */
+    min-width: 44px; min-height: 44px; flex: none;
+    background: none; border: none; color: var(--accento); font-size: 18px;
+  }
+  .banner-memoria.nascosto { display: none; }
+
+</style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+<symbol id="i-aggiorna" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /> <path d="M21 3v5h-5" /> <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /> <path d="M8 16H3v5" /></symbol>
+
+<symbol id="i-casa" viewBox="0 0 24 24"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" /> <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></symbol>
+
+<symbol id="i-documento" viewBox="0 0 24 24"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" /> <path d="M14 2v5a1 1 0 0 0 1 1h5" /> <path d="M10 9H8" /> <path d="M16 13H8" /> <path d="M16 17H8" /></symbol>
+
+<symbol id="i-caffe" viewBox="0 0 24 24"><path d="M10 2v2" /> <path d="M14 2v2" /> <path d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1" /> <path d="M6 2v2" /></symbol>
+
+<symbol id="i-pizza" viewBox="0 0 24 24"><path d="m12 14-1 1" /> <path d="m13.75 18.25-1.25 1.42" /> <path d="M17.775 5.654a15.68 15.68 0 0 0-12.121 12.12" /> <path d="M18.8 9.3a1 1 0 0 0 2.1 7.7" /> <path d="M21.964 20.732a1 1 0 0 1-1.232 1.232l-18-5a1 1 0 0 1-.695-1.232A19.68 19.68 0 0 1 15.732 2.037a1 1 0 0 1 1.232.695z" /></symbol>
+
+<symbol id="i-persone" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /> <path d="M16 3.128a4 4 0 0 1 0 7.744" /> <path d="M22 21v-2a4 4 0 0 0-3-3.87" /> <circle cx="9" cy="7" r="4" /></symbol>
+
+<symbol id="i-libro" viewBox="0 0 24 24"><path d="M12 5v16" /> <path d="M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z" /></symbol>
+
+<symbol id="i-auto" viewBox="0 0 24 24"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" /> <circle cx="7" cy="17" r="2" /> <path d="M9 17h6" /> <circle cx="17" cy="17" r="2" /></symbol>
+
+<symbol id="i-posate" viewBox="0 0 24 24"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" /> <path d="M7 2v20" /> <path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" /></symbol>
+
+<symbol id="i-utente" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /> <circle cx="12" cy="7" r="4" /></symbol>
+
+<symbol id="i-salute" viewBox="0 0 24 24"><path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5" /> <path d="M3.22 13H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27" /></symbol>
+
+<symbol id="i-spesa" viewBox="0 0 24 24"><path d="m2.05 2.05 1.099-.028a1 1 0 0 1 1.008.815l2.69 14.347A1 1 0 0 0 7.83 18H18" /> <path d="M4.563 5h16.435a1 1 0 0 1 .981 1.204l-1.026 6.226A2 2 0 0 1 18.962 14H6.25" /> <circle cx="18" cy="20" r="2" /> <circle cx="8" cy="20" r="2" /></symbol>
+
+<symbol id="i-gioco" viewBox="0 0 24 24"><line x1="6" x2="10" y1="11" y2="11" /> <line x1="8" x2="8" y1="9" y2="13" /> <line x1="15" x2="15.01" y1="12" y2="12" /> <line x1="18" x2="18.01" y1="10" y2="10" /> <path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z" /></symbol>
+
+<symbol id="i-tasse" viewBox="0 0 24 24"><path d="M10 18v-7" /> <path d="M11.119 2.205a2 2 0 0 1 1.762 0l7.84 3.846A.5.5 0 0 1 20.5 7h-17a.5.5 0 0 1-.22-.949z" /> <path d="M14 18v-7" /> <path d="M18 18v-7" /> <path d="M3 22h18" /> <path d="M6 18v-7" /></symbol>
+
+<symbol id="i-telefono" viewBox="0 0 24 24"><rect width="14" height="20" x="5" y="2" rx="2" ry="2" /> <path d="M12 18h.01" /></symbol>
+
+<symbol id="i-bus" viewBox="0 0 24 24"><path d="M8 6v6" /> <path d="M15 6v6" /> <path d="M2 12h19.6" /> <path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3" /> <circle cx="7" cy="18" r="2" /> <path d="M9 18h5" /> <circle cx="16" cy="18" r="2" /></symbol>
+
+<symbol id="i-aereo" viewBox="0 0 24 24"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z" /></symbol>
+
+<symbol id="i-emergenza" viewBox="0 0 24 24"><path d="M7 18v-6a5 5 0 1 1 10 0v6" /> <path d="M5 21a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2z" /> <path d="M21 12h1" /> <path d="M18.5 4.5 18 5" /> <path d="M2 12h1" /> <path d="M12 2v1" /> <path d="m4.929 4.929.707.707" /> <path d="M12 12v6" /></symbol>
+
+<symbol id="i-maglietta" viewBox="0 0 24 24"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z" /></symbol>
+
+<symbol id="i-regalo" viewBox="0 0 24 24"><path d="M12 7v14" /> <path d="M20 11v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8" /> <path d="M7.5 7a1 1 0 0 1 0-5A4.8 8 0 0 1 12 7a4.8 8 0 0 1 4.5-5 1 1 0 0 1 0 5" /> <rect x="3" y="7" width="18" height="4" rx="1" /></symbol>
+
+<symbol id="i-lavoro" viewBox="0 0 24 24"><path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /> <rect width="20" height="14" x="2" y="6" rx="2" /></symbol>
+
+<symbol id="i-banca" viewBox="0 0 24 24"><path d="M10 12h4m-4-4h4m0 13v-3a2 2 0 0 0-4 0v3" /> <path d="M6 10H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2" /> <path d="M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16" /></symbol>
+
+<symbol id="i-banconote" viewBox="0 0 24 24"><rect width="20" height="12" x="2" y="6" rx="2" /> <circle cx="12" cy="12" r="2" /> <path d="M6 12h.01M18 12h.01" /></symbol>
+
+<symbol id="i-lampadina" viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5" /> <path d="M9 18h6" /> <path d="M10 22h4" /></symbol>
+
+<symbol id="i-carta" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2" /> <line x1="2" x2="22" y1="10" y2="10" /> <path d="M6 14h2" /></symbol>
+
+<symbol id="i-bersaglio" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <circle cx="12" cy="12" r="6" /> <circle cx="12" cy="12" r="2" /></symbol>
+
+<symbol id="i-busta" viewBox="0 0 24 24"><path d="M16 10a4 4 0 0 1-8 0" /> <path d="M3.103 6.034h17.794" /> <path d="M3.4 5.467a2 2 0 0 0-.4 1.2V20a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6.667a2 2 0 0 0-.4-1.2l-2-2.667A2 2 0 0 0 17 2H7a2 2 0 0 0-1.6.8z" /></symbol>
+
+<symbol id="i-folgore" viewBox="0 0 24 24"><path d="M15.914 4a1.5 1.5 0 00-2.474-1.561l-9 9A1.5 1.5 0 005.5 14h4.002a.5.5 0 01.471.666L8.086 20a1.5 1.5 0 002.475 1.56l9-9A1.5 1.5 0 0018.5 10h-3.997a.5.5 0 01-.472-.667z" /></symbol>
+
+<symbol id="i-mondo" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" /> <path d="M2 12h20" /></symbol>
+
+<symbol id="i-chiave" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105c.32-.322.863-.22.983.218a6 6 0 0 1-8.259 7.057l-7.91 7.91a1 1 0 0 1-2.999-3l7.91-7.91a6 6 0 0 1 7.057-8.259c.438.12.54.662.219.984z" /></symbol>
+
+<symbol id="i-cuore" viewBox="0 0 24 24"><path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5" /></symbol>
+
+<symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 17v5" /> <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z" /></symbol>
+
+<symbol id="i-pesi" viewBox="0 0 24 24"><path d="M17.596 12.768a2 2 0 1 0 2.829-2.829l-1.768-1.767a2 2 0 0 0 2.828-2.829l-2.828-2.828a2 2 0 0 0-2.829 2.828l-1.767-1.768a2 2 0 1 0-2.829 2.829z" /> <path d="m2.5 21.5 1.4-1.4" /> <path d="m20.1 3.9 1.4-1.4" /> <path d="M5.343 21.485a2 2 0 1 0 2.829-2.828l1.767 1.768a2 2 0 1 0 2.829-2.829l-6.364-6.364a2 2 0 1 0-2.829 2.829l1.768 1.767a2 2 0 0 0-2.828 2.829z" /> <path d="m9.6 14.4 4.8-4.8" /></symbol>
+
+<symbol id="i-film" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" /> <path d="M7 3v18" /> <path d="M3 7.5h4" /> <path d="M3 12h18" /> <path d="M3 16.5h4" /> <path d="M17 3v18" /> <path d="M17 7.5h4" /> <path d="M17 16.5h4" /></symbol>
+
+<symbol id="i-trofeo" viewBox="0 0 24 24"><path d="M10 14.66V17a1 1 0 0 1-1 1 2 2 0 0 0-2 2v2" /> <path d="M14 14.66V17a1 1 0 0 0 1 1 2 2 0 0 1 2 2v2" /> <path d="M17.916 10H19.5A2.5 2.5 0 0 0 22 7.5V5a1 1 0 0 0-1-1h-3" /> <path d="M4 22h16" /> <path d="M6 9a6 6 0 0 0 12 0V3a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1z" /> <path d="M6.084 10H4.5A2.5 2.5 0 0 1 2 7.5V5a1 1 0 0 1 1-1h3" /></symbol>
+
+<symbol id="i-ricevuta" viewBox="0 0 24 24"><path d="M12 17V7" /> <path d="M16 8h-6a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H8" /> <path d="M4 3a1 1 0 0 1 1-1 1.3 1.3 0 0 1 .7.2l.933.6a1.3 1.3 0 0 0 1.4 0l.934-.6a1.3 1.3 0 0 1 1.4 0l.933.6a1.3 1.3 0 0 0 1.4 0l.933-.6a1.3 1.3 0 0 1 1.4 0l.934.6a1.3 1.3 0 0 0 1.4 0l.933-.6A1.3 1.3 0 0 1 19 2a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1 1.3 1.3 0 0 1-.7-.2l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.934.6a1.3 1.3 0 0 1-1.4 0l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-1.4 0l-.934-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-.7.2 1 1 0 0 1-1-1z" /></symbol>
+
+<symbol id="i-portafoglio" viewBox="0 0 24 24"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1" /> <path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4" /></symbol>
+
+<symbol id="i-domanda" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3m.08 4h.01" /></symbol>
+
+<symbol id="i-etichetta" viewBox="0 0 24 24"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z" /> <circle cx="7.5" cy="7.5" r=".5" fill="currentColor" /></symbol>
+
+<symbol id="i-calendario" viewBox="0 0 24 24"><path d="M8 2v3" /> <path d="M16 2v3" /> <rect x="3" y="3" width="18" height="18" rx="2" /> <path d="M3 9h18" /> <path d="M8 13h.01" /> <path d="M12 13h.01" /> <path d="M16 13h.01" /> <path d="M8 17h.01" /> <path d="M12 17h.01" /> <path d="M16 17h.01" /></symbol>
+
+<symbol id="i-scarica" viewBox="0 0 24 24"><path d="M12 15V3" /> <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /> <path d="m7 10 5 5 5-5" /></symbol>
+
+<symbol id="i-carica" viewBox="0 0 24 24"><path d="M12 3v12" /> <path d="m17 8-5-5-5 5" /> <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /></symbol>
+
+<symbol id="i-provetta" viewBox="0 0 24 24"><path d="M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2" /> <path d="M6.453 15h11.094" /> <path d="M8.5 2h7" /></symbol>
+
+<symbol id="i-spazzatura" viewBox="0 0 24 24"><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></symbol>
+
+<symbol id="i-piu" viewBox="0 0 24 24"><path d="M5 12h14" /> <path d="M12 5v14" /></symbol>
+
+<symbol id="i-matita" viewBox="0 0 24 24"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497zM15 5l4 4" /></symbol>
+
+<symbol id="i-barre" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16m-3-4V9m-5 8V5M8 17v-3" /></symbol>
+
+<symbol id="i-torta" viewBox="0 0 24 24"><path d="M21 12c.552 0 1.005-.449.95-.998a10 10 0 0 0-8.953-8.951c-.55-.055-.998.398-.998.95v8a1 1 0 0 0 1 1z" /> <path d="M21.21 15.89A10 10 0 1 1 8 2.83" /></symbol>
+
+<symbol id="i-alberi" viewBox="0 0 24 24"><path d="M10 10v.2A3 3 0 0 1 8.9 16H5a3 3 0 0 1-1-5.8V10a3 3 0 0 1 6 0m-3 6v6m6-3v3" /> <path d="M12 19h8.3a1 1 0 0 0 .7-1.7L18 14h.3a1 1 0 0 0 .7-1.7L16 9h.2a1 1 0 0 0 .8-1.7L13 3l-1.4 1.5" /></symbol>
+<symbol id="i-ancora" viewBox="0 0 24 24"><path d="M12 22V8m-7 4H2a10 10 0 0 0 20 0h-3" /> <circle cx="12" cy="5" r="3" /></symbol>
+<symbol id="i-arte" viewBox="0 0 24 24"><path d="M12 22a1 1 0 0 1 0-20a10 9 0 0 1 10 9a5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z" /> <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" /> <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" /> <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" /> <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" /></symbol>
+<symbol id="i-barca" viewBox="0 0 24 24"><path d="M10 2v15m-3 5a4 4 0 0 1-4-4a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1a4 4 0 0 1-4 4zM9.159 2.46a1 1 0 0 1 1.521-.193l9.977 8.98A1 1 0 0 1 20 13H4a1 1 0 0 1-.824-1.567z" /></symbol>
+<symbol id="i-benzina" viewBox="0 0 24 24"><path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 4 0v-6.998a2 2 0 0 0-.59-1.42L18 5m-4 16V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v16m-1 0h13M3 9h11" /></symbol>
+<symbol id="i-bici" viewBox="0 0 24 24"><circle cx="18.5" cy="17.5" r="3.5" /> <circle cx="5.5" cy="17.5" r="3.5" /> <circle cx="15" cy="5" r="1" /> <path d="M12 17.5V14l-3-3l4-3l2 3h2" /></symbol>
+<symbol id="i-birra" viewBox="0 0 24 24"><path d="M17 11h1a3 3 0 0 1 0 6h-1m-8-5v6m4-6v6m1-10.5c-1 0-1.44.5-3 .5s-2-.5-3-.5s-1.72.5-2.5.5a2.5 2.5 0 0 1 0-5c.78 0 1.57.5 2.5.5S9.44 2 11 2s2 1.5 3 1.5s1.72-.5 2.5-.5a2.5 2.5 0 0 1 0 5c-.78 0-1.5-.5-2.5-.5" /> <path d="M5 8v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8" /></symbol>
+<symbol id="i-biscotto" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10a4 4 0 0 1-5-5a4 4 0 0 1-5-5M8.5 8.5v.01M16 15.5v.01M12 12v.01M11 17v.01M7 14v.01" /></symbol>
+<symbol id="i-cane" viewBox="0 0 24 24"><path d="M11.25 16.25h1.5L12 17zM16 14v.5" /> <path d="M4.42 11.247A13.2 13.2 0 0 0 4 14.556C4 18.728 7.582 21 12 21s8-2.272 8-6.444a11.7 11.7 0 0 0-.493-3.309M8 14v.5" /> <path d="M8.5 8.5c-.384 1.05-1.083 2.028-2.344 2.5c-1.931.722-3.576-.297-3.656-1c-.113-.994 1.177-6.53 4-7c1.923-.321 3.651.845 3.651 2.235A7.5 7.5 0 0 1 14 5.277c0-1.39 1.844-2.598 3.767-2.277c2.823.47 4.113 6.006 4 7c-.08.703-1.725 1.722-3.656 1c-1.261-.472-1.855-1.45-2.239-2.5" /></symbol>
+<symbol id="i-chevron-giu" viewBox="0 0 24 24"><path d="m6 9l6 6l6-6" /></symbol>
+<symbol id="i-cuffie" viewBox="0 0 24 24"><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3" /></symbol>
+<symbol id="i-dadi" viewBox="0 0 24 24"><rect x="2" y="10" width="12" height="12" rx="2" ry="2" /> <path d="m17.92 14l3.5-3.5a2.24 2.24 0 0 0 0-3l-5-4.92a2.24 2.24 0 0 0-3 0L10 6M6 18h.01M10 14h.01M15 6h.01M18 9h.01" /></symbol>
+<symbol id="i-divano" viewBox="0 0 24 24"><path d="M20 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v3" /> <path d="M2 16a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v1.5a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5V11a2 2 0 0 0-4 0zm2 2v2m16-2v2M12 4v9" /></symbol>
+<symbol id="i-dolce" viewBox="0 0 24 24"><path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8" /> <path d="M4 16s.5-1 2-1s2.5 2 4 2s2.5-2 4-2s2.5 2 4 2s2-1 2-1M2 21h20M7 8v3m5-3v3m5-3v3M7 4h.01M12 4h.01M17 4h.01" /></symbol>
+<symbol id="i-festa" viewBox="0 0 24 24"><path d="M5.8 11.3L2 22l10.7-3.79M4 3h.01M22 8h.01M15 2h.01M22 20h.01M22 2l-2.24.75a2.9 2.9 0 0 0-1.96 3.12c.1.86-.57 1.63-1.45 1.63h-.38c-.86 0-1.6.6-1.76 1.44L14 10m8 3l-.82-.33c-.86-.34-1.82.2-1.98 1.11c-.11.7-.72 1.22-1.43 1.22H17M11 2l.33.82c.34.86-.2 1.82-1.11 1.98c-.7.1-1.22.72-1.22 1.43V7" /> <path d="M11 13c1.93 1.93 2.83 4.17 2 5s-3.07-.07-5-2s-2.83-4.17-2-5s3.07.07 5 2" /></symbol>
+<symbol id="i-fiore" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /> <path d="M12 16.5A4.5 4.5 0 1 1 7.5 12A4.5 4.5 0 1 1 12 7.5a4.5 4.5 0 1 1 4.5 4.5a4.5 4.5 0 1 1-4.5 4.5m0-9V9m-4.5 3H9m7.5 0H15m-3 4.5V15M8 8l1.88 1.88m4.24 0L16 8m-8 8l1.88-1.88m4.24 0L16 16" /></symbol>
+<symbol id="i-foglia" viewBox="0 0 24 24"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8c0 5.5-4.78 10-10 10" /> <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" /></symbol>
+<symbol id="i-fotocamera" viewBox="0 0 24 24"><path d="M13.997 4a2 2 0 0 1 1.76 1.05l.486.9A2 2 0 0 0 18.003 7H20a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1.997a2 2 0 0 0 1.759-1.048l.489-.904A2 2 0 0 1 10.004 4z" /> <circle cx="12" cy="13" r="3" /></symbol>
+<symbol id="i-gatto" viewBox="0 0 24 24"><path d="M12 5c.67 0 1.35.09 2 .26c1.78-2 5.03-2.84 6.42-2.26c1.4.58-.42 7-.42 7c.57 1.07 1 2.24 1 3.44C21 17.9 16.97 21 12 21s-9-3-9-7.56c0-1.25.5-2.4 1-3.44c0 0-1.89-6.42-.5-7s4.72.23 6.5 2.23A9 9 0 0 1 12 5m-4 9v.5m8-.5v.5" /> <path d="M11.25 16.25h1.5L12 17z" /></symbol>
+<symbol id="i-gelato" viewBox="0 0 24 24"><path d="m7 11l4.08 10.35a1 1 0 0 0 1.84 0L17 11m0-4A5 5 0 0 0 7 7m10 0a2 2 0 0 1 0 4H7a2 2 0 0 1 0-4" /></symbol>
+<symbol id="i-giornale" viewBox="0 0 24 24"><path d="M15 18h-5m8-4h-8m-6 8h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2" /> <rect x="10" y="6" width="8" height="4" rx="1" /></symbol>
+<symbol id="i-insalata" viewBox="0 0 24 24"><path d="M7 21h10m-5 0a9 9 0 0 0 9-9H3a9 9 0 0 0 9 9" /> <path d="M11.38 12a2.4 2.4 0 0 1-.4-4.77a2.4 2.4 0 0 1 3.2-2.77a2.4 2.4 0 0 1 3.47-.63a2.4 2.4 0 0 1 3.37 3.37a2.4 2.4 0 0 1-1.1 3.7a2.5 2.5 0 0 1 .03 1.1M13 12l4-4" /> <path d="M10.9 7.25A3.99 3.99 0 0 0 4 10c0 .73.2 1.41.54 2" /></symbol>
+<symbol id="i-laurea" viewBox="0 0 24 24"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0zM22 10v6" /> <path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5" /></symbol>
+<symbol id="i-letto" viewBox="0 0 24 24"><path d="M2 4v16M2 8h18a2 2 0 0 1 2 2v10M2 17h20M6 8v9" /></symbol>
+<symbol id="i-luna" viewBox="0 0 24 24"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" /></symbol>
+<symbol id="i-martello" viewBox="0 0 24 24"><path d="m15 12l-9.373 9.373a1 1 0 0 1-3.001-3L12 9m6 6l4-4" /> <path d="m21.5 11.5l-1.914-1.914A2 2 0 0 1 19 8.172v-.344a2 2 0 0 0-.586-1.414l-1.657-1.657A6 6 0 0 0 12.516 3H9l1.243 1.243A6 6 0 0 1 12 8.485V10l2 2h1.172a2 2 0 0 1 1.414.586L18.5 14.5" /></symbol>
+<symbol id="i-medaglia" viewBox="0 0 24 24"><path d="M7.21 15L2.66 7.14a2 2 0 0 1 .13-2.2L4.4 2.8A2 2 0 0 1 6 2h12a2 2 0 0 1 1.6.8l1.6 2.14a2 2 0 0 1 .14 2.2L16.79 15M11 12L5.12 2.2M13 12l5.88-9.8M8 7h8" /> <circle cx="12" cy="17" r="5" /> <path d="M12 18v-2h-.5" /></symbol>
+<symbol id="i-microfono" viewBox="0 0 24 24"><path d="M12 19v3m7-12v2a7 7 0 0 1-14 0v-2" /> <rect x="9" y="2" width="6" height="13" rx="3" /></symbol>
+<symbol id="i-microscopio" viewBox="0 0 24 24"><path d="M6 18h8M3 22h18m-7 0a7 7 0 1 0 0-14h-1m-4 6h2m-2-2a2 2 0 0 1-2-2V6h6v4a2 2 0 0 1-2 2Zm3-6V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3" /></symbol>
+<symbol id="i-montagna" viewBox="0 0 24 24"><path d="m8 3l4 8l5-5l5 15H2z" /></symbol>
+<symbol id="i-musica" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13" /> <circle cx="6" cy="18" r="3" /> <circle cx="18" cy="16" r="3" /></symbol>
+<symbol id="i-negozio" viewBox="0 0 24 24"><path d="M15 21v-5a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v5m8.774-10.69a1.12 1.12 0 0 0-1.549 0a2.5 2.5 0 0 1-3.451 0a1.12 1.12 0 0 0-1.548 0a2.5 2.5 0 0 1-3.452 0a1.12 1.12 0 0 0-1.549 0a2.5 2.5 0 0 1-3.77-3.248l2.889-4.184A2 2 0 0 1 7 2h10a2 2 0 0 1 1.653.873l2.895 4.192a2.5 2.5 0 0 1-3.774 3.244" /> <path d="M4 10.95V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8.05" /></symbol>
+<symbol id="i-neve" viewBox="0 0 24 24"><path d="m10 20l-1.25-2.5L6 18m4-14L8.75 6.5L6 6m8 14l1.25-2.5L18 18M14 4l1.25 2.5L18 6" /> <path d="m17 21l-3-6h-4m7-12l-3 6l1.5 3M2 12h6.5L10 9m10 1l-1.5 2l1.5 2" /> <path d="M22 12h-6.5L14 15M4 10l1.5 2L4 14m3 7l3-6l-1.5-3M7 3l3 6h4" /></symbol>
+<symbol id="i-ombrello" viewBox="0 0 24 24"><path d="M12 13v7a2 2 0 0 0 4 0M12 2v2" /> <path d="M20.992 13a1 1 0 0 0 .97-1.274a10.284 10.284 0 0 0-19.923 0A1 1 0 0 0 3 13z" /></symbol>
+<symbol id="i-onde" viewBox="0 0 24 24"><path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2c2.5 0 2.5-2 5-2c1.3 0 1.9.5 2.5 1M2 12c.6.5 1.2 1 2.5 1c2.5 0 2.5-2 5-2c2.6 0 2.4 2 5 2c2.5 0 2.5-2 5-2c1.3 0 1.9.5 2.5 1M2 18c.6.5 1.2 1 2.5 1c2.5 0 2.5-2 5-2c2.6 0 2.4 2 5 2c2.5 0 2.5-2 5-2c1.3 0 1.9.5 2.5 1" /></symbol>
+<symbol id="i-panino" viewBox="0 0 24 24"><path d="m2.37 11.223l8.372-6.777a2 2 0 0 1 2.516 0l8.371 6.777M21 15a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-5.25M3 15a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h9" /> <path d="m6.67 15l6.13 4.6a2 2 0 0 0 2.8-.4l3.15-4.2" /> <rect x="2" y="11" width="20" height="4" rx="1" /></symbol>
+<symbol id="i-pennello" viewBox="0 0 24 24"><path d="m11 10l3 3m-7.5 8A3.5 3.5 0 1 0 3 17.5a2.62 2.62 0 0 1-.708 1.792A1 1 0 0 0 3 21z" /> <path d="M9.969 17.031L21.378 5.624a1 1 0 0 0-3.002-3.002L6.967 14.031" /></symbol>
+<symbol id="i-pesce" viewBox="0 0 24 24"><path d="M6.5 12c.94-3.46 4.94-6 8.5-6s6.06 2.54 7 6c-.94 3.47-3.44 6-7 6s-7.56-2.53-8.5-6M18 12v.5" /> <path d="M16 17.93a9.77 9.77 0 0 1 0-11.86m-9 4.6C7 8 5.58 5.97 2.73 5.5c-1 1.5-1 5 .23 6.5c-1.24 1.5-1.24 5-.23 6.5C5.58 18.03 7 16 7 13.33" /> <path d="M10.46 7.26C10.2 5.88 9.17 4.24 8 3h5.8a2 2 0 0 1 1.98 1.67l.23 1.4m0 11.86l-.23 1.4A2 2 0 0 1 13.8 21H9.5a5.96 5.96 0 0 0 1.49-3.98" /></symbol>
+<symbol id="i-pianta" viewBox="0 0 24 24"><path d="M14 9.536V7a4 4 0 0 1 4-4h1.5a.5.5 0 0 1 .5.5V5a4 4 0 0 1-4 4a4 4 0 0 0-4 4c0 2 1 3 1 5a5 5 0 0 1-1 3M4 9a5 5 0 0 1 8 4a5 5 0 0 1-8-4m1 12h14" /></symbol>
+<symbol id="i-pillola" viewBox="0 0 24 24"><path d="m10.5 20.5l10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7m-2-12l7 7" /></symbol>
+<symbol id="i-salvadanaio" viewBox="0 0 24 24"><path d="M11 17h3v2a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-3a3.16 3.16 0 0 0 2-2h1a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1h-1a5 5 0 0 0-2-4V3a4 4 0 0 0-3.2 1.6l-.3.4H11a6 6 0 0 0-6 6v1a5 5 0 0 0 2 4v3a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1zm5-7h.01M2 8v1a2 2 0 0 0 2 2h1" /></symbol>
+<symbol id="i-schermo" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" /> <path d="M8 21h8m-4-4v4" /></symbol>
+<symbol id="i-sole" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" /> <path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" /></symbol>
+<symbol id="i-sorriso" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <path d="M8 14s1.5 2 4 2s4-2 4-2M9 9h.01M15 9h.01" /></symbol>
+<symbol id="i-stella" viewBox="0 0 24 24"><path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.12 2.12 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.12 2.12 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.12 2.12 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.12 2.12 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.12 2.12 0 0 0 1.597-1.16z" /></symbol>
+<symbol id="i-stetoscopio" viewBox="0 0 24 24"><path d="M11 2v2M5 2v2m0-1H4a2 2 0 0 0-2 2v4a6 6 0 0 0 12 0V5a2 2 0 0 0-2-2h-1" /> <path d="M8 15a6 6 0 0 0 12 0v-3" /> <circle cx="20" cy="10" r="2" /></symbol>
+<symbol id="i-televisione" viewBox="0 0 24 24"><path d="m17 2l-5 5l-5-5" /> <rect x="2" y="7" width="20" height="15" rx="2" /></symbol>
+<symbol id="i-tenda" viewBox="0 0 24 24"><path d="M3.5 21L14 3m6.5 18L10 3m5.5 18L12 15l-3.5 6M2 21h20" /></symbol>
+<symbol id="i-treno" viewBox="0 0 24 24"><path d="M8 3.1V7a4 4 0 0 0 8 0V3.1M9 15l-1-1m7 1l1-1" /> <path d="M9 19c-2.8 0-5-2.2-5-5v-4a8 8 0 0 1 16 0v4c0 2.8-2.2 5-5 5Zm-1 0l-2 3m10-3l2 3" /></symbol>
+<symbol id="i-uccello" viewBox="0 0 24 24"><path d="M16 7h.01M3.4 18H12a8 8 0 0 0 8-8V7a4 4 0 0 0-7.28-2.3L2 20" /> <path d="m20 7l2 .5l-2 .5M10 18v3m4-3.25V21m-7-3a6 6 0 0 0 3.84-10.61" /></symbol>
+<symbol id="i-vino" viewBox="0 0 24 24"><path d="M8 22h8M7 10h10m-5 5v7m0-7a5 5 0 0 0 5-5c0-2-.5-4-2-8H9c-1.5 4-2 6-2 8a5 5 0 0 0 5 5" /></symbol>
+<symbol id="i-wifi" viewBox="0 0 24 24"><path d="M12 20h.01M2 8.82a15 15 0 0 1 20 0M5 12.859a10 10 0 0 1 14 0m-10.5 3.57a5 5 0 0 1 7 0" /></symbol>
+<symbol id="i-lavatrice" viewBox="0 0 24 24"><path d="M3 6h3m11 0h.01" /><rect width="18" height="20" x="3" y="2" rx="2" /><circle cx="12" cy="13" r="5" /><path d="M12 18a2.5 2.5 0 0 0 0-5a2.5 2.5 0 0 1 0-5" /></symbol>
+<symbol id="i-presa" viewBox="0 0 24 24"><path d="M12 22v-5M9 8V2m6 6V2m3 6v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z" /></symbol>
+<symbol id="i-biglietto" viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Zm11-4v2m0 10v2m0-8v2" /></symbol>
+<symbol id="i-popcorn" viewBox="0 0 24 24"><path d="M18 8a2 2 0 0 0 0-4a2 2 0 0 0-4 0a2 2 0 0 0-4 0a2 2 0 0 0-4 0a2 2 0 0 0 0 4m4 14L9 8m5 14l1-14" /><path d="M20 8c.5 0 .9.4.8 1l-2.6 12c-.1.5-.7 1-1.2 1H7c-.6 0-1.1-.4-1.2-1L3.2 9c-.1-.6.3-1 .8-1Z" /></symbol>
+<symbol id="i-cornetto" viewBox="0 0 24 24"><path d="M10.2 18H4.774a1.5 1.5 0 0 1-1.352-.97a11 11 0 0 1 .132-6.487M18 10.2V4.774a1.5 1.5 0 0 0-.97-1.352a11 11 0 0 0-6.486.132" /><path d="M18 5a4 3 0 0 1 4 3a2 2 0 0 1-2 2a10 10 0 0 0-5.139 1.42M5 18a3 4 0 0 0 3 4a2 2 0 0 0 2-2a10 10 0 0 1 1.42-5.14" /><path d="M8.709 2.554a10 10 0 0 0-6.155 6.155a1.5 1.5 0 0 0 .676 1.626l9.807 5.42a2 2 0 0 0 2.718-2.718l-5.42-9.807a1.5 1.5 0 0 0-1.626-.676" /></symbol>
+<symbol id="i-uovo" viewBox="0 0 24 24"><path d="M12 2C8 2 4 8 4 14a8 8 0 0 0 16 0c0-6-4-12-8-12" /></symbol>
+<symbol id="i-latte" viewBox="0 0 24 24"><path d="M8 2h8M9 2v2.789a4 4 0 0 1-.672 2.219l-.656.984A4 4 0 0 0 7 10.212V20a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-9.789a4 4 0 0 0-.672-2.219l-.656-.984A4 4 0 0 1 15 4.788V2" /><path d="M7 15a6.47 6.47 0 0 1 5 0a6.47 6.47 0 0 0 5 0" /></symbol>
+<symbol id="i-mappa" viewBox="0 0 24 24"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0zm.894.211v15M9 3.236v15" /></symbol>
+<symbol id="i-bussola" viewBox="0 0 24 24"><path d="m16.24 7.76l-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z" /><circle cx="12" cy="12" r="10" /></symbol>
+<!-- Icona interna del banner di memoria temporanea: non sta nel selettore -->
+<symbol id="i-attenzione" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" /><path d="M12 9v4" /><path d="M12 17h.01" /></symbol>
+</svg>
+<div id="app"></div>
+<div class="overlay" id="overlay" onclick="eventoOverlay(event)"><div class="modale" id="modale"></div></div>
+
+<script>
+"use strict";
+
+/* ================================================================
+   1. COSTANTI E UTILITÀ
+   ================================================================ */
+const MESI = ["gennaio","febbraio","marzo","aprile","maggio","giugno","luglio",
+              "agosto","settembre","ottobre","novembre","dicembre"];
+const MESI_BREVI = ["gen","feb","mar","apr","mag","giu","lug","ago","set","ott","nov","dic"];
+const GIORNI = ["domenica","lunedì","martedì","mercoledì","giovedì","venerdì","sabato"];
+/* Icone: sprite Lucide inline subito dopo il <body>. Nei dati viaggia solo
+   l'id corto italiano, mai il disegno; "etichetta" è il fallback di tutto.
+   ICONE_RAPIDE è la prima pagina del selettore del form categoria/conto,
+   ICONE_VARIE è il set aggiuntivo per le categorie nuove: il selettore li
+   sfoglia in ordine (ICONE_DEL_PICKER), 30 per pagina. DA_EMOJI traduce le
+   emoji dei dati salvati (e dei backup) prima del restyle */
+const ICONE = ["aggiorna","casa","documento","caffe","pizza","persone","libro","auto","posate",
+               "utente","salute","spesa","gioco","tasse","telefono","bus","aereo","emergenza",
+               "maglietta","regalo","lavoro","banca","banconote","lampadina","carta","bersaglio",
+               "busta","folgore","mondo","chiave","cuore","pin","pesi","film","trofeo","ricevuta",
+               "portafoglio","domanda","etichetta","calendario","scarica","carica","provetta",
+               "spazzatura","piu","matita","barre","torta",
+               "treno","barca","bici","benzina","martello","divano","letto","negozio","salvadanaio",
+               "laurea","giornale","televisione","schermo","cuffie","microfono","musica","arte",
+               "pennello","fotocamera","dadi","medaglia","festa","sorriso","stella","sole","luna",
+               "neve","ombrello","onde","montagna","tenda","alberi","pianta","foglia","fiore",
+               "cane","gatto","pesce","uccello","birra","vino","gelato","dolce","biscotto",
+               "panino","insalata","stetoscopio","pillola","microscopio","ancora","chevron-giu",
+               "wifi","lavatrice","presa","biglietto","popcorn","cornetto","uovo","latte",
+               "mappa","bussola"];
+const ICONE_RAPIDE = ["casa","spesa","caffe","pizza","auto","telefono","lampadina","maglietta",
+                      "libro","regalo","lavoro","salute","gioco","aereo","bus","posate","film",
+                      "trofeo","ricevuta","carta","banconote","banca","bersaglio","busta","folgore",
+                      "mondo","chiave","cuore","pin","pesi"];
+const ICONE_VARIE = ["treno","barca","bici","benzina","martello","divano","letto","negozio",
+                     "salvadanaio","laurea","giornale","televisione","schermo","cuffie","microfono",
+                     "musica","arte","pennello","fotocamera","dadi","medaglia","festa","sorriso",
+                     "stella","sole","luna","neve","ombrello","onde","montagna","tenda","alberi",
+                     "pianta","foglia","fiore","cane","gatto","pesce","uccello","birra","vino",
+                     "gelato","dolce","biscotto","panino","insalata","stetoscopio","pillola",
+                     "microscopio","ancora","wifi","lavatrice","presa","biglietto","popcorn",
+                     "cornetto","uovo","latte","mappa","bussola"];
+const ICONE_DEL_PICKER = [...ICONE_RAPIDE, ...ICONE_VARIE];   // ordine di sfoglio, 30 per pagina
+const DA_EMOJI = {"🔄":"aggiorna","🏠":"casa","📄":"documento","☕":"caffe","🍕":"pizza","👥":"persone",
+                 "📚":"libro","🚗":"auto","🍽️":"posate","👤":"utente","🏥":"salute","🛒":"spesa",
+                 "🎮":"gioco","🏛️":"tasse","📱":"telefono","🚌":"bus","✈️":"aereo","🚨":"emergenza",
+                 "👕":"maglietta","🎁":"regalo","💼":"lavoro","🏦":"banca","💵":"banconote","💡":"lampadina",
+                 "🧾":"ricevuta","💳":"carta","🎯":"bersaglio","🛍️":"busta","⚡":"folgore","🌐":"mondo",
+                 "🔧":"chiave","❤️":"cuore","📌":"pin","🏋️":"pesi","🎬":"film","🏆":"trofeo","❓":"domanda",
+                 "💰":"portafoglio","🏷️":"etichetta","🧪":"provetta","🗑️":"spazzatura","✏️":"matita",
+                 "📊":"barre","📈":"torta","📅":"calendario","⬇️":"scarica","⬆️":"carica","➕":"piu","⚽":"trofeo"};
+// L'icona valida o il fallback: mai un id inesistente dentro lo sprite
+const icona = id => `<svg class="ico" aria-hidden="true"><use href="#i-${ICONE.includes(id) ? id : "etichetta"}"/></svg>`;
+
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+const iso = d => d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+const dataIt = s => s.slice(8,10) + "/" + s.slice(5,7) + "/" + s.slice(0,4);   // da ISO a gg/mm/aaaa
+const eur = n => n.toLocaleString("it-IT", {minimumFractionDigits: 2, maximumFractionDigits: 2}) + " €";
+const num = n => n.toLocaleString("it-IT", {maximumFractionDigits: 2});   // compatto, per le etichette della barra
+const arrotonda = n => Math.round(n * 100) / 100;
+const esc = s => String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+                              .replace(/"/g,"&quot;").replace(/'/g,"&#39;").replace(/`/g,"&#96;");
+
+// Ricerca di categoria o conto per id
+const cat = id => dati.categorie.find(c => c.id === id) || null;
+const conto = id => dati.conti.find(c => c.id === id) || null;
+
+/* ================================================================
+   2. DATABASE (IndexedDB)
+   Se IndexedDB non è disponibile (es. anteprima sandbox), l'app
+   lavora solo in memoria: tutto il resto funziona identico.
+   ================================================================ */
+let db = null;
+
+function prom(q) { return new Promise((ris, err) => { q.onsuccess = () => ris(q.result); q.onerror = () => err(q.error); }); }
+
+function apriDB() {
+  return new Promise(ris => {
+    let r;
+    try { r = indexedDB.open("finanze", 3); }
+    catch (e) { return ris(null); }
+    r.onupgradeneeded = e => {
+      const d = e.target.result;
+      // I negozi già esistenti (aggiornamento dalle versioni precedenti) non vanno ricreati
+      if (!d.objectStoreNames.contains("movimenti"))   d.createObjectStore("movimenti",   {keyPath: "id", autoIncrement: true});
+      if (!d.objectStoreNames.contains("categorie"))   d.createObjectStore("categorie",   {keyPath: "id", autoIncrement: true});
+      if (!d.objectStoreNames.contains("conti"))       d.createObjectStore("conti",       {keyPath: "id", autoIncrement: true});
+      if (!d.objectStoreNames.contains("budget"))      d.createObjectStore("budget",      {keyPath: "id", autoIncrement: true});
+      if (!d.objectStoreNames.contains("periodi"))     d.createObjectStore("periodi",     {keyPath: "id", autoIncrement: true});
+      if (!d.objectStoreNames.contains("impostazioni")) d.createObjectStore("impostazioni", {keyPath: "chiave"});
+      if (!d.objectStoreNames.contains("backup"))      d.createObjectStore("backup",      {keyPath: "id", autoIncrement: true});   // le istantanee automatiche (v3)
+    };
+    r.onsuccess = () => ris(r.result);
+    r.onerror = () => ris(null);
+  });
+}
+
+const tabella = (s, m) => db.transaction(s, m).objectStore(s);
+async function dbSalva(s, obj) {
+  if (db) {
+    const o = tabella(s, "readwrite");
+    // Le impostazioni usano "chiave" come chiave: il put inserisce o
+    // aggiorna senza mai andare in conflitto con il record esistente
+    if (s === "impostazioni") { await prom(o.put(obj)); return; }
+    if (obj.id == null) obj.id = await prom(o.add(obj));
+    else await prom(o.put(obj));
+  } else if (s !== "impostazioni" && obj.id == null) {
+    // Senza IndexedDB: in memoria le impostazioni vivono già in dati
+    obj.id = dati._id[s]++;
+  }
+}
+async function dbElimina(s, id) { if (db) await prom(tabella(s, "readwrite").delete(id)); }
+
+async function caricaTutto() {
+  if (db) {
+    const leggi = s => prom(tabella(s, "readonly").getAll());
+    dati.movimenti    = await leggi("movimenti");
+    dati.categorie    = await leggi("categorie");
+    dati.conti        = await leggi("conti");
+    dati.budget       = await leggi("budget");
+    dati.periodi      = await leggi("periodi");
+    dati.impostazioni = (await leggi("impostazioni")).find(i => i.chiave === "app") || null;
+    dati.backup = await leggi("backup");
+  }
+}
+
+/* ================================================================
+   3. DATI IN MEMORIA E VALORI PREDEFINITI
+   Le categorie sono piatte: nome, icona e direzione.
+   I budget hanno un nome e possono raccogliere più categorie.
+   ================================================================ */
+const dati = {
+  movimenti: [], categorie: [], conti: [], budget: [], periodi: [],
+  backup: [],   // le istantanee automatiche: al massimo tre, dentro l'app
+  impostazioni: null,
+  _id: {movimenti: 1, categorie: 1, conti: 1, budget: 1, periodi: 1, backup: 1}   // solo per la modalità senza IndexedDB
+};
+
+const CATEGORIE_DEFAULT = [
+  // uscite
+  ["Abbonamenti","aggiorna"],["Affitto","casa"],["Bollette e varie","documento"],["Caffè","caffe"],
+  ["Cibo random","pizza"],["Eventi sociali","persone"],["Libri","libro"],["Macchina","auto"],
+  ["Mangiare fuori","posate"],["Pagamenti ad personam","utente"],["Salute","salute"],["Spesa","spesa"],
+  ["Svago personale","gioco"],["Tasse","tasse"],["Telefono","telefono"],["Trasporti ordinari","bus"],
+  ["Trasporti eccezionali","aereo"],["Varie contingenti","emergenza"],["Vestiti","maglietta"],
+  // entrate
+  ["Regali","regalo"],["Stipendio","lavoro"]
+];
+
+const CONTI_DEFAULT = [["Carta","carta"], ["Satispay","telefono"], ["Contanti","banconote"]];
+
+async function semina() {
+  if (dati.conti.length === 0)
+    for (const [nome, icona] of CONTI_DEFAULT) {
+      const c = {nome, icona}; await dbSalva("conti", c); dati.conti.push(c);
+    }
+  if (dati.categorie.length === 0)
+    for (const [nome, icona] of CATEGORIE_DEFAULT) {
+      const c = {nome, icona,
+                 direzione: (nome === "Regali" || nome === "Stipendio") ? "entrata" : "uscita"};
+      await dbSalva("categorie", c); dati.categorie.push(c);
+    }
+  if (!dati.impostazioni) {
+    dati.impostazioni = {chiave: "app", periodoModalita: "mensile",
+                         contoDefault: dati.conti[0].id};
+    await dbSalva("impostazioni", dati.impostazioni);
+  }
+  await assegnaOrdine();    // appena seminate, le categorie hanno subito l'ordine spostabile
+  await assegnaColori();    // e il colore stabile della torta
+}
+
+const salvaImpostazioni = () => dbSalva("impostazioni", dati.impostazioni);
+
+/* ================================================================
+   4. PERIODI TEMPORALI
+   Modalità: settimanale | mensile | libero
+   In Libero i periodi chiusi vivono nella collezione "periodi";
+   il periodo aperto corre dal giorno dopo l'ultima chiusura a oggi.
+   ================================================================ */
+const giorniInMese = (y, m) => new Date(y, m + 1, 0).getDate();
+const giornoReset = (y, m, g) => Math.min(g, giorniInMese(y, m));   // serve alla migrazione e all'import dei backup vecchi
+const ieriDi = s => { const d = new Date(s + "T12:00:00"); d.setDate(d.getDate() - 1); return iso(d); };
+const domaniDi = s => { const d = new Date(s + "T12:00:00"); d.setDate(d.getDate() + 1); return iso(d); };
+// "Ieri" vero del calendario, senza sottrarre millisecondi (a mezzanotte del
+// cambio d'ora legale 24 ore esatte potrebbero cadere sul giorno sbagliato)
+const ieriIso = () => { const d = new Date(); d.setDate(d.getDate() - 1); return iso(d); };
+
+// Periodi chiusi in ordine cronologico
+const periodiOrdinati = () => [...dati.periodi].sort((a, b) => a.inizio.localeCompare(b.inizio));
+
+function periodo() {
+  const imp = dati.impostazioni, oggi = new Date(), off = stato.offset;
+  const fmt = (d, anno) => d.getDate() + " " + MESI_BREVI[d.getMonth()] + (anno ? " " + d.getFullYear() : "");
+
+  if (imp.periodoModalita === "settimanale") {
+    const da = new Date(oggi); da.setDate(oggi.getDate() - ((oggi.getDay() + 6) % 7) + off * 7);
+    const a = new Date(da); a.setDate(da.getDate() + 6);
+    const etichetta = da.getMonth() === a.getMonth()
+      ? `${da.getDate()}–${a.getDate()} ${MESI_BREVI[da.getMonth()]} ${a.getFullYear()}`
+      : `${da.getDate()} ${MESI_BREVI[da.getMonth()]} – ${a.getDate()} ${MESI_BREVI[a.getMonth()]} ${a.getFullYear()}`;
+    return {da, a, etichetta};
+  }
+
+  if (imp.periodoModalita === "mensile") {
+    const da = new Date(oggi.getFullYear(), oggi.getMonth() + off, 1);
+    const a = new Date(da.getFullYear(), da.getMonth() + 1, 0);
+    return {da, a, etichetta: cap(MESI[da.getMonth()]) + " " + da.getFullYear()};
+  }
+
+  // Libero: offset 0 = aperto; +1 = spese programmate; indietro tra i chiusi
+  const chiusi = periodiOrdinati();
+  const o = Math.max(-chiusi.length, Math.min(1, off));   // mai oltre i limiti
+  const oggiIso = iso(oggi);
+  if (o === 1) {   // oltre l'aperto: le spese registrate per giorni ancora da venire
+    const da = new Date(oggi); da.setDate(oggi.getDate() + 1);
+    return {da, a: new Date(9999, 11, 31), aperto: false, etichetta: "Spese programmate"};
+  }
+  if (o === 0) {
+    const inizio = imp.liberoInizio || iso(new Date(oggi.getFullYear(), oggi.getMonth(), 1));
+    const da = new Date(inizio + "T12:00:00"), a = new Date(oggi);
+    const futuro = inizio > oggiIso;   // chiuso oggi: il nuovo aperto nasce domani
+    return {da, a, aperto: true, menuOggi: !futuro,
+            etichetta: fmt(da, da.getFullYear() !== a.getFullYear()) + (futuro ? " (da domani)" : " – oggi")};
+  }
+  const p = chiusi[chiusi.length + o];
+  const da = new Date(p.inizio + "T12:00:00"), a = new Date(p.fine + "T12:00:00");
+  return {da, a, aperto: false,
+          etichetta: da.getFullYear() === a.getFullYear()
+            ? fmt(da) + " – " + fmt(a)
+            : fmt(da, true) + " – " + fmt(a, true)};
+}
+
+const movimentiNelPeriodo = () => {
+  const p = periodo();
+  return dati.movimenti.filter(m => m.data >= iso(p.da) && m.data <= iso(p.a));
+};
+
+function spostaPeriodo(d) {
+  if (dati.impostazioni.periodoModalita === "libero") {
+    // In Libero si fermano alle programmate (destra) e al chiuso più vecchio (sinistra)
+    const nuovo = Math.max(-periodiOrdinati().length, Math.min(1, stato.offset + d));
+    if (nuovo === stato.offset) return;
+    stato.offset = nuovo;
+  } else stato.offset += d;
+  // Il cambio di periodo scorre come le pagine: avanti = entra da destra
+  stato._dir = stato._per = d > 0 ? "entra-dx" : "entra-sx";
+  stato._menu = false;
+  render();
+}
+
+/* ---- Chiusura del periodo aperto (solo Libero) ---- */
+async function chiudiPeriodo(fine) {
+  fine = fine || iso(new Date());   // senza argomento: oggi
+  const inizio = dati.impostazioni.liberoInizio;
+  // Solo oggi o passato, mai prima dell'apertura
+  if (!inizio || fine < inizio || fine > iso(new Date())) return;
+  const p = {inizio, fine};
+  await dbSalva("periodi", p); dati.periodi.push(p);
+  dati.impostazioni.liberoInizio = domaniDi(fine);   // il nuovo aperto parte domani
+  await salvaImpostazioni();
+  await backupAuto("chiusura");   // la fotografia della chiusura, etichettata col periodo che inizia: il prossimo avvio non ne farà una gemella
+  stato.offset = -1;   // mostra il periodo appena chiuso
+  stato._menu = false;
+  render();
+}
+
+function menuChiudi() { if (!stato._menu) storiaApri(); stato._menu = true; render(); }
+function chiudiMenu() { if (stato._menu) { stato._menu = false; storiaTogli(); render(); } }
+
+function apriCalChiusura() {
+  apriCalendario("chiusura", {data: null, min: dati.impostazioni.liberoInizio, max: iso(new Date())});
+}
+
+/* ---- Passaggio alla modalità Libero ----
+   La prima volta (nessun periodo chiuso) i periodi si generano dai
+   movimenti; ai ritorni successivi l'archivio esistente si riprende. */
+async function attivaLibero(daMensileLibera) {
+  const imp = dati.impostazioni;
+  if (dati.periodi.length) {
+    // Riancora l'aperto se manca o confligge con l'ultimo chiuso
+    const ultimo = periodiOrdinati();
+    const fine = ultimo[ultimo.length - 1].fine;
+    if (!imp.liberoInizio || imp.liberoInizio <= fine) imp.liberoInizio = domaniDi(fine);
+    return;
+  }
+  const gen = generaPeriodiLibero(daMensileLibera, dati.movimenti, imp.resetGiorno);
+  for (const p of gen.chiusi) { await dbSalva("periodi", p); dati.periodi.push(p); }
+  imp.liberoInizio = gen.inizioAperto;
+}
+
+// Genera i chiusi dal mese del movimento più antico fino al mese scorso.
+// Arrivando da "mensile a data libera" si ricostruiscono i cicli col giorno
+// di reset; negli altri casi si usano i mesi solari (1°–fine mese).
+// È una funzione pura: non tocca né il database né i dati, così l'import
+// di un backup può generare i periodi prima di sostituirli.
+function generaPeriodiLibero(daMensileLibera, movimenti, g) {
+  const oggi = new Date();
+  let chiusi = [], inizioAperto = null;
+
+  if (movimenti.length) {
+    const prima = new Date([...movimenti].sort((a, b) => a.data.localeCompare(b.data))[0].data + "T12:00:00");
+    if (daMensileLibera && g) {
+      let y = prima.getFullYear(), m = prima.getMonth();
+      if (prima.getDate() < giornoReset(y, m, g)) m--;   // ciclo in corso iniziato il mese scorso
+      if (m < 0) { m = 11; y--; }
+      let cy = oggi.getFullYear(), cm = oggi.getMonth();
+      if (oggi.getDate() < giornoReset(cy, cm, g)) cm--;
+      if (cm < 0) { cm = 11; cy--; }
+      for (let t = y * 12 + m; t < cy * 12 + cm; t++) {
+        const yy = Math.floor(t / 12), mm = t - yy * 12;
+        chiusi.push({inizio: iso(new Date(yy, mm, giornoReset(yy, mm, g))),
+                     fine: ieriDi(iso(new Date(yy, mm + 1, giornoReset(yy, mm + 1, g))))});
+      }
+      inizioAperto = iso(new Date(cy, cm, giornoReset(cy, cm, g)));
+    } else {
+      let y = prima.getFullYear(), m = prima.getMonth();
+      while (y * 12 + m < oggi.getFullYear() * 12 + oggi.getMonth()) {
+        chiusi.push({inizio: iso(new Date(y, m, 1)), fine: iso(new Date(y, m + 1, 0))});
+        m++; if (m > 11) { m = 0; y++; }
+      }
+      inizioAperto = iso(new Date(oggi.getFullYear(), oggi.getMonth(), 1));
+    }
+  }
+  // Zero movimenti: solo l'aperto, dall'1 del mese corrente
+  if (!inizioAperto) inizioAperto = iso(new Date(oggi.getFullYear(), oggi.getMonth(), 1));
+  return {chiusi, inizioAperto};
+}
+
+/* ================================================================
+   5. RENDERING COMUNE
+   ================================================================ */
+const stato = {pagina: "movimenti", offset: 0, modifica: null,
+               importoStr: "", direzione: "uscita", contoSel: null,
+               categoria: null, _data: null, _nota: "", filtro: null, dietro: "movimenti",
+               _cal: null, _menu: false, _dir: null, _per: null, _locale: null};
+// L'ordine del menù in basso detta anche la direzione dell'animazione di vai()
+const PAGINE = ["movimenti", "analisi", "budget"];
+let sheetNuovo = false;   // true solo quando il foglio si apre: serve per l'animazione
+
+// In Libero, oltre l'aperto (offset 1) c'è il periodo virtuale delle spese programmate
+const speseProgrammate = () => dati.impostazioni.periodoModalita === "libero" && stato.offset === 1;
+
+function render() {
+  if (stato.pagina === "periodi") return renderPeriodi();
+  // Con un foglio aperto (form o Impostazioni), dietro resta la pagina d'origine
+  const visibile = (stato.pagina === "form" || stato.pagina === "impostazioni")
+    ? stato.dietro : stato.pagina;
+
+  const p = periodo();
+  const pagina = visibile === "movimenti" ? renderMovimenti()
+              : visibile === "analisi"   ? renderAnalisi()
+              : renderBudget();
+  const foglio = stato.pagina === "form" ? corpoForm()
+              : stato.pagina === "impostazioni" ? foglioImpostazioni() : "";
+  // Direzione calcolata da vai(): consumata qui, una volta sola
+  const dir = stato._dir; stato._dir = null;
+  const dirE = stato._per; stato._per = null;   // anima l'etichetta solo se è cambiato il periodo
+
+  // In Libero, sul periodo aperto, "oggi" diventa il pulsante di chiusura
+  const libero = dati.impostazioni.periodoModalita === "libero";
+  let etichetta = p.etichetta, sospeso = "";
+  if (libero && p.aperto && p.menuOggi) {
+    const ieri = ieriIso();
+    etichetta = p.etichetta.replace("oggi",
+      `<button class="btn-oggi" onclick="menuChiudi()">oggi ▾</button>`);
+    if (stato._menu) sospeso = `
+      <div class="tappeto-menu" onclick="chiudiMenu()"></div>
+      <div class="menu-chiusura">
+        <button onclick="chiudiMenu();chiudiPeriodo()">Chiudi periodo oggi</button>
+        ${ieri >= dati.impostazioni.liberoInizio ? `<button onclick="chiudiMenu();chiudiPeriodo('${ieri}')">Chiudi periodo ieri</button>` : ""}
+        <button onclick="chiudiMenu();apriCalChiusura()">Chiudi – seleziona data</button>
+      </div>`;
+  }
+  const fermoSx = libero && stato.offset <= -periodiOrdinati().length;
+  const fermoDx = libero && stato.offset >= 1;
+
+  document.getElementById("app").innerHTML = `
+    <div class="testa-fissa">
+    <div class="fascia1${stato._menu ? " con-menu" : ""}">
+      <div class="nav-periodo">
+        <button class="btn-freccia${fermoSx ? " fermo" : ""}" onclick="spostaPeriodo(-1)">‹</button>
+        <span class="etichetta-periodo${dirE ? " " + dirE : ""}">${etichetta}</span>
+        <button class="btn-freccia${fermoDx ? " fermo" : ""}" onclick="spostaPeriodo(1)">›</button>
+      </div>
+      <button class="btn-puntini" onclick="vai('impostazioni')">⋮</button>
+      ${sospeso}
+    </div>
+    ${pagina.kpi}
+    </div>
+    <div class="pagina-corpo${dir ? " " + dir : ""}">${pagina.corpo}</div>
+    ${foglio}
+    <div class="nav-basso">
+      <button class="${visibile === "movimenti" ? "attivo" : ""}" onclick="vai('movimenti')"><span class="icona">${icona("barre")}</span>Movimenti</button>
+      <button class="${visibile === "analisi" ? "attivo" : ""}" onclick="vai('analisi')"><span class="icona">${icona("torta")}</span>Analisi</button>
+      <button class="${visibile === "budget" ? "attivo" : ""}" onclick="vai('budget')"><span class="icona">${icona("bersaglio")}</span>Budgets</button>
+      <button class="piu" onclick="apriInserimento()"><span class="icona">＋</span></button>
+    </div>
+    ${stato._locale ? `<div class="tappeto-menu sopra" onclick="chiudiMenuLocale()"></div>
+    <div class="menu-locale" style="left:${stato._locale.x}px;top:${stato._locale.y}px">${stato._locale.voci.map((v, i) => `<button class="${v.pericoloso ? "pericoloso" : ""}" onclick="voceMenuLocale(${i})">${v.testo}</button>`).join("")}</div>` : ""}`;
+  if (stato.pagina === "form") attivaSwipeFoglio();
+  if (stato.pagina === "impostazioni") attivaSwipeFoglio(chiudiImpostazioni);
+}
+
+function vai(pagina) {
+  // Tasto indietro: entrare in una pagina-schermo lascia una voce nella
+  // cronologia, tornare indietro la toglie. Periodi sta IMPILATO sopra
+  // Impostazioni: andarci è un'apertura, e il suo tasto ‹ è un ritorno.
+  // Col tasto indietro del telefono non si tocca niente: la voce l'ha già
+  // tolta il browser. (Il form entra ed esce per conto suo, con apriInserimento/apriModifica)
+  if (!daIndietro && pagina !== stato.pagina) {
+    const nuova = PAGINE_SCHERMO.includes(pagina), vecchia = PAGINE_SCHERMO.includes(stato.pagina);
+    if ((nuova && !vecchia) || (stato.pagina === "impostazioni" && pagina === "periodi")) storiaApri();
+    else if ((vecchia && !nuova) || (stato.pagina === "periodi" && pagina === "impostazioni")) storiaTogli();
+  }
+  // Analisi e Budget vivono "dentro" Movimenti per il tasto indietro: entrarci
+  // mette una voce nella cronologia, il tasto indietro la consuma riportando
+  // a Movimenti (e da lì, col secondo colpo, esce dall'app). Chi arriva a
+  // Movimenti col filtro aperto (categoria, conto o dettaglio budget) non
+  // tocca la voce della sezione: quella del filtro l'ha messa chi l'ha aperto,
+  // e dietro c'è comunque la pagina d'origine.
+  if (PAGINE.includes(pagina) && PAGINE.includes(stato.pagina) && pagina !== stato.pagina) {
+    if (pagina === "movimenti") {
+      if (!stato.filtro) {   // tornare alla base, non entrare in una schermata filtrata
+        if (voceSezione && !daIndietro) storiaTogli();
+        voceSezione = false;
+      }
+    } else if (!voceSezione && !daIndietro) { storiaApri(); voceSezione = true; }
+  }
+  // Il foglio Impostazioni entra con l'animazione e ricorda la pagina d'origine
+  if (pagina === "impostazioni" && stato.pagina !== "impostazioni") {
+    if (PAGINE.includes(stato.pagina)) stato.dietro = stato.pagina;
+    sheetNuovo = true;   // il foglio entra con l'animazione di scorrimento dal basso
+  }
+  // Direzione dell'animazione: avanti nel menù = entra da destra
+  const da = PAGINE.indexOf(stato.pagina), a = PAGINE.indexOf(pagina);
+  stato._dir = da >= 0 && a >= 0 && da !== a ? (a > da ? "entra-dx" : "entra-sx") : null;
+  stato.pagina = pagina; stato.modifica = null; stato._menu = false; render(); window.scrollTo(0, 0);
+}
+
+// Fascia 2: riepilogo a 3 caselle (o 2 nella pagina Budget)
+function kpiHtml(ms) {
+  if (ms === null) {   // variante Budget: budget totale / budget speso
+    let totale = 0, speso = 0;
+    const mp = movimentiNelPeriodo();
+    for (const b of dati.budget) { totale += b.limite; speso += spesaBudget(b, mp); }
+    return `<div class="kpi kpi2">
+      <div class="casella"><div class="titolo">Budget totale</div><div class="valore neutro">${eur(arrotonda(totale))}</div></div>
+      <div class="casella"><div class="titolo">Budget speso</div><div class="valore neutro">${eur(arrotonda(speso))}</div></div>
+    </div>`;
+  }
+  let entrate = 0, uscite = 0;
+  for (const m of ms) m.tipo === "entrata" ? entrate += m.importo : uscite += m.importo;
+  const bilancio = arrotonda(entrate - uscite);
+  return `<div class="kpi">
+    <div class="casella"><div class="titolo">Entrate</div><div class="valore verde">+ ${eur(entrate)}</div></div>
+    <div class="casella"><div class="titolo">Uscite</div><div class="valore rosso">− ${eur(uscite)}</div></div>
+    <div class="casella"><div class="titolo">Bilancio</div><div class="valore ${bilancio >= 0 ? "verde" : "rosso"}">${bilancio >= 0 ? "+" : "−"} ${eur(Math.abs(bilancio))}</div></div>
+  </div>`;
+}
+
+/* ================================================================
+   6. PAGINA MOVIMENTI (Home)
+   ================================================================ */
+function renderMovimenti() {
+  let ms = movimentiNelPeriodo();
+  let banner = "";
+  if (stato.filtro) {   // filtro attivo: solo i movimenti di quella categoria o conto
+    banner = bannerFiltro();
+    ms = ms.filter(m => corrispondeFiltro(m, stato.filtro));
+  }
+  ms = ms.sort((a, b) => b.data.localeCompare(a.data) || b.id - a.id);
+
+  // Raggruppamento per giorno
+  const gruppi = [];
+  for (const m of ms) {
+    const g = gruppi.find(x => x.data === m.data);
+    g ? g.movs.push(m) : gruppi.push({data: m.data, movs: [m]});
+  }
+
+  let lista = "";
+  const oggi = iso(new Date());
+  const ieri = ieriIso();
+  for (const g of gruppi) {
+    const d = new Date(g.data + "T12:00:00");
+    const titolo = g.data === oggi ? "Oggi" : g.data === ieri ? "Ieri"
+      : cap(GIORNI[d.getDay()]) + " " + d.getDate() + " " + MESI[d.getMonth()];
+    lista += `<div class="giorno"><span>${titolo}</span></div>`;
+    for (const m of g.movs) lista += rigaMovimento(m);
+  }
+  if (!ms.length) lista = `<div class="vuoto">${speseProgrammate()
+    ? "Nessuna spesa programmata per ora." : "Nessun movimento in questo periodo."}</div>`;
+
+  return {kpi: kpiHtml(ms), corpo: banner + `<div class="corpo">${lista}</div>`};
+}
+
+// Un movimento corrisponde al filtro categoria/conto/budget attivo?
+// Il filtro budget è il dettaglio di un budget: solo le spese delle sue categorie
+function corrispondeFiltro(m, f) {
+  if (f.tipo === "categoria") {
+    const c = cat(m.categoria);
+    return (c ? String(c.id) : "nessuna") === f.id;
+  }
+  if (f.tipo === "budget") {
+    const b = dati.budget.find(x => x.id === Number(f.id));
+    return m.tipo === "uscita" && !!b && b.categorie.includes(m.categoria);
+  }
+  return String(m.conto) === f.id;
+}
+
+// Dalla pagina Analisi: tocca categoria o conto per vederne solo i movimenti.
+// Si ricorda da dove è partito il filtro: il ✕ è un ritorno, non un resta lì
+function filtraPer(tipo, id) {
+  // Il filtro è una schermata: il tasto indietro la richiude e riporta indietro
+  storiaApri();
+  stato.filtro = {tipo, id: String(id), da: stato.pagina};
+  vai("movimenti");
+}
+function togliFiltro() {
+  // Il dettaglio di un budget è una schermata: il ✕ la richiude e torna ai budget
+  if (stato.filtro?.tipo === "budget") return chiudiBudgetDettaglio();
+  const da = stato.filtro?.da;
+  stato.filtro = null;
+  storiaTogli();   // la voce del filtro: col tasto indietro l'ha già tolta il browser
+  // Filtro aperto da Analisi: il ✕ riporta alla pagina di provenienza
+  if (da && da !== stato.pagina) return vai(da);
+  render();
+}
+
+// Etichetta del filtro attivo, sopra la lista movimenti
+function bannerFiltro() {
+  const f = stato.filtro;
+  let ico, nome;
+  if (f.tipo === "categoria") {
+    const c = f.id === "nessuna" ? null : cat(Number(f.id));
+    ico = icona(c ? c.icona : "domanda"); nome = c ? c.nome : "Senza categoria";
+  } else if (f.tipo === "budget") {
+    const b = dati.budget.find(x => x.id === Number(f.id));
+    ico = icona("bersaglio"); nome = b ? b.nome : "Budget";
+  } else {
+    const co = conto(Number(f.id));
+    ico = icona(co ? co.icona : "portafoglio"); nome = co ? co.nome : "Conto";
+  }
+  return `<div class="banner-filtro"><span>${ico} ${esc(nome)}</span>
+    <button onclick="togliFiltro()" aria-label="Togli filtro">✕</button></div>`;
+}
+
+function rigaMovimento(m) {
+  const c = cat(m.categoria), co = conto(m.conto);
+  const ico = icona(c ? c.icona : "portafoglio");
+  const titolo = c ? c.nome : "Movimento";
+  // Il disegno dell'icona non passa da esc(): si concatenano le parti già ripulite
+  const parti = [];
+  if (co) parti.push(icona(co.icona) + " " + esc(co.nome));
+  if (m.nota) parti.push(esc(m.nota));
+  const sotto = parti.join(" – ");
+  const segno = m.tipo === "entrata" ? "+" : "−";
+  return `<div class="mov" onclick="apriModifica(${m.id})">
+    <div class="icona-mov">${ico}</div>
+    <div class="info">
+      <div class="titolo">${esc(titolo)}</div>
+      ${sotto ? `<div class="sotto">${sotto}</div>` : ""}
+    </div>
+    <div class="importo ${m.tipo === "entrata" ? "verde" : "rosso"}">${segno} ${eur(m.importo)}</div>
+  </div>`;
+}
+
+/* ================================================================
+   7. PAGINA ANALISI (solo uscite)
+   Torta statica con legenda affiancata + lista categorie con barre.
+   ================================================================ */
+function renderAnalisi() {
+  const ms = movimentiNelPeriodo().filter(m => m.tipo === "uscita");
+
+  // Aggregazione per categoria
+  const gruppi = new Map();
+  for (const m of ms) {
+    const c = cat(m.categoria);
+    const k = c ? c.id : "nessuna";
+    const g = gruppi.get(k) || {k, nome: c ? c.nome : "Senza categoria",
+                                ico: icona(c ? c.icona : "domanda"), slot: c?.colore, totale: 0};
+    g.totale += m.importo;
+    gruppi.set(k, g);
+  }
+
+  const voci = [...gruppi.values()].sort((a, b) => b.totale - a.totale);
+  const totale = voci.reduce((s, v) => s + v.totale, 0);
+
+  let corpo = "";
+  if (!voci.length) corpo = `<div class="vuoto">Nessuna spesa in questo periodo.</div>`;
+  else {
+    const C = 2 * Math.PI * 60;   // grafico a torta: anelli SVG
+    let acc = 0, segmenti = "", legenda = "", barre = "";
+    voci.forEach((v, i) => {
+      v.perc = totale ? v.totale / totale * 100 : 0;
+      // Il colore è lo slot assegnato alla categoria (neutro chi non ce l'ha):
+      // var() va nello style, negli attributi di presentazione non funziona
+      const col = v.slot ? `var(--cat-${v.slot})` : "var(--neutro)";
+      const len = C * v.perc / 100;
+      segmenti += `<circle r="60" cx="80" cy="80" fill="none" stroke-width="34" style="stroke:${col}"
+        stroke-dasharray="${len} ${C - len}" stroke-dashoffset="${-acc}" transform="rotate(-90 80 80)"/>`;
+      acc += len;
+      legenda += `<div class="voce"><span class="pallino" style="background:${col}"></span>${esc(v.nome)}</div>`;
+      barre += `<div class="riga-cat" onclick="filtraPer('categoria','${v.k}')">
+        <div class="testa"><span>${v.ico} ${esc(v.nome)}</span><span>${eur(v.totale)}</span></div>
+        <div class="riga-barra">
+          <div class="barra"><div class="riempimento" style="width:${v.perc}%;background:${col}"></div></div>
+          <span class="perc">${v.perc.toFixed(1).replace(".", ",")}%</span>
+        </div>
+      </div>`;
+    });
+    // Sintesi per conto: solo la somma delle uscite, senza grafico
+    const perConto = dati.conti.map(co => ({
+      id: co.id, ico: icona(co.icona), nome: co.nome,
+      totale: arrotonda(ms.filter(m => m.conto === co.id).reduce((s, m) => s + m.importo, 0))
+    })).filter(x => x.totale > 0).sort((a, b) => b.totale - a.totale);
+    if (perConto.length) barre += `<div class="separatore"></div>` +
+      perConto.map(v => `<div class="riga-conto" onclick="filtraPer('conto','${v.id}')">
+        <div class="testa"><span>${v.ico} ${esc(v.nome)}</span><span>${eur(v.totale)}</span></div>
+      </div>`).join("");
+    corpo = `<div class="torta">
+        <svg viewBox="0 0 160 160" width="150" height="150" style="flex:none">${segmenti}</svg>
+        <div class="legenda">${legenda}</div>
+      </div>${barre}`;
+  }
+
+  return {kpi: kpiHtml(movimentiNelPeriodo()), corpo: `<div class="corpo">${corpo}</div>`};
+}
+
+/* ================================================================
+   8. PAGINA BUDGETS
+   Un budget ha un nome personalizzato e può coprire più categorie:
+   somma le spese di tutte le categorie scelte nel periodo.
+   ================================================================ */
+function spesaBudget(b, ms) {
+  return arrotonda(ms.filter(m => m.tipo === "uscita" && b.categorie.includes(m.categoria))
+    .reduce((s, m) => s + m.importo, 0));
+}
+
+function renderBudget() {
+  // Nelle spese programmate i budget non c'entrano: il futuro non è ancora speso
+  if (speseProgrammate()) return {kpi: "",
+    corpo: `<div class="corpo"><div class="vuoto">I budget non tengono conto delle spese programmate.</div></div>`};
+  const ms = movimentiNelPeriodo();
+  let righe = "";
+  for (const b of dati.budget) {
+    const speso = spesaBudget(b, ms);
+    const rimanente = arrotonda(b.limite - speso);
+    const sforato = speso > b.limite;
+    const lim = b.limite > 0 ? b.limite : 1;
+    // Parziale di ogni categoria che ha speso qualcosa, in ordine alfabetico
+    const parziali = categorieOrdinate().filter(c => b.categorie.includes(c.id))
+      .map(c => ({c, euro: arrotonda(spesaBudget({categorie: [c.id]}, ms))}))
+      .filter(x => x.euro > 0);
+    // Barra a segmenti: un pezzo per categoria, largo come la sua parte del
+    // limite. Il colore NON è quello della torta di Analisi: i segmenti
+    // seguono la scala di blu della palette (Blu notte) per posizione, e
+    // oltre la quarta tinta si ricomincia (possono ripetersi: qui l'unicità
+    // non serve). Se sforato i pezzi si stringono per stare nel 100% della
+    // barra, che è sempre e comunque il limite (e diventano rossi: il CSS
+    // .sforato vince su --col)
+    const scala = speso > lim ? lim / speso : 1;
+    const segmenti = parziali.map((x, i) =>
+      `<span style="width:${Math.min(100, x.euro * scala / lim * 100).toFixed(2)}%;--col:var(--bud-${i % 4 + 1})"></span>`).join("");
+    // Sotto la barra i traguardi: da ogni confine un filo scende fino alla
+    // riga della sua etichetta e si ferma alla BASE delle lettere (font
+    // 10px in una riga da 16: le lettere finiscono ~12px dentro la riga),
+    // senza sporgere sotto. La scritta comincia appena DOPO il filo; se da
+    // lì sforerebbe il margine destro (in prima riga c'è il limite, che
+    // non si muove mai) si sposta tutta PRIMA del filo, ancorata al filo
+    // col suo bordo DESTRO: la stima di larghezza è volutamente prudente
+    // (serve per gli scontri) e ancorare col bordo sinistro lasciava un
+    // vuoto tra scritta e filo pari all'errore di stima; col bordo destro
+    // la vicinanza al filo è esatta comunque. I marcatori si valutano da
+    // sinistra a destra: chi tocca una scritta già posata scende di una
+    // riga e il filo si allunga fino alla sua riga (scende sempre almeno
+    // una).
+    // Con una sola categoria i traguardi intermedi non servono: resta la
+    // barra, che si conclude col limite in fondo (scelta di Daniele)
+    const RIGA = 16, PIEDE = 12, CAR = 1.7, GAP = 1, DIETRO = 0.5;   // riga in px, base lettere in px, carattere stimato in %, stacco dal filo, stacco quando la scritta va prima del filo
+    const tFine = `${num(b.limite)} €`;
+    const filiT = [], etichT = [];
+    let nRighe = 1;
+    if (b.categorie.length > 1) {
+      const fineSx = 100 - tFine.length * CAR;   // tratto della prima riga già occupato dal limite
+      const fineRiga = [];                       // per ogni riga, il bordo destro dell'ultima etichetta
+      let cum = 0;
+      const marc = parziali.map(x => {
+        cum += x.euro;
+        return {x, pos: Math.min(100, cum * scala / lim * 100)};
+      }).sort((a, b) => a.pos - b.pos);          // si valuta da sinistra a destra
+      for (const m of marc) {
+        const testo = `${m.x.c.nome}: ${num(m.x.euro)} €`;
+        const lar = testo.length * CAR;
+        let r = 0, sx = 0, prima = false;
+        for (;;) {
+          if (r > 6) { sx = Math.max(0, Math.min(m.pos + GAP, 100 - GAP - lar)); break; }   // caso estremo: clampato nei margini
+          const margine = (r === 0 ? fineSx : 100) - GAP;   // oltre questo bordo destro non si va
+          if (m.pos + GAP + lar <= margine) { sx = m.pos + GAP; prima = false; }   // dopo il filo
+          else if (m.pos - DIETRO >= lar && (r > 0 || m.pos - DIETRO <= margine)) {   // prima del filo (sotto la prima riga il bordo destro è il filo stesso: resta sempre dentro lo schermo)
+            sx = m.pos - DIETRO - lar; prima = true;   // sx qui conta solo per gli scontri: il bordo destro vero della scritta è il filo
+          }
+          else { r++; continue; }   // in questa riga non ci sta: scende
+          if (sx > (fineRiga[r] ?? -1) + GAP) break;   // libera: si posa
+          r++;                                        // tocca una scritta già posata: riga sotto
+        }
+        fineRiga[r] = Math.max(fineRiga[r] ?? -1, sx + lar);
+        nRighe = Math.max(nRighe, r + 1);
+        filiT.push(`<span class="filo" style="left:${m.pos.toFixed(2)}%;height:${r * RIGA + PIEDE}px"></span>`);
+        // Prima del filo la scritta si ancora col bordo destro al filo, così lo stacco non dipende dalla stima
+        const ancora = prima ? `right:${(100 - m.pos + DIETRO).toFixed(2)}%` : `left:${sx.toFixed(2)}%`;
+        etichT.push(`<span class="etichetta" style="${ancora};top:${r * RIGA}px">${esc(testo)}</span>`);
+      }
+    }
+    righe += `<div class="riga-budget ${sforato ? "sforato" : ""}" onclick="apriBudgetDettaglio(${b.id})">
+      <div class="testa"><span class="icona-budget">${icona("bersaglio")}</span><span class="nome">${esc(b.nome)}</span>
+        <button class="tre-punti" id="puntini-budget-${b.id}" onclick="event.stopPropagation();menuBudget(${b.id})">⋮</button></div>
+      <div class="dati"><span>Limite: <b>${eur(b.limite)}</b></span><span>Speso: <b>${eur(speso)}</b></span></div>
+      <div class="rimanente">${sforato ? "Sforato di: " + eur(-rimanente) : "Rimanente: " + eur(rimanente)}</div>
+      <div class="barra-segmenti">${segmenti}</div>
+      <div class="traguardi" style="height:${nRighe * RIGA}px">${filiT.join("")}${etichT.join("")}
+        <span class="etichetta fine">${esc(tFine)}</span></div>
+    </div>`;
+  }
+  if (!dati.budget.length) righe = `<div class="vuoto">Nessun budget impostato.</div>`;
+
+  return {kpi: kpiHtml(null), corpo: `<div class="corpo">${righe}
+    <button class="btn-secondario" onclick="apriBudgetModale(null)">${icona("piu")} Imposta budget</button></div>`};
+}
+
+function apriBudgetModale(id) {
+  const b = id ? dati.budget.find(x => x.id === id) : null;
+  // Il monitoraggio riguarda le spese: solo categorie di uscita
+  const spese = categorieDi("uscita");
+  stato._budgetSel = b ? [...b.categorie] : [];
+  apriModale(`<h3>${b ? "Modifica budget" : "Nuovo budget"}</h3>
+    <div class="campo"><div class="etichetta-campo">Nome</div>
+      <input type="text" id="bNome" maxlength="30" value="${b ? esc(b.nome) : ""}" placeholder="Es. Spese cibo"></div>
+    <div class="campo"><div class="etichetta-campo">Limite di spesa (€)</div>
+      <input type="number" id="bLimite" inputmode="decimal" step="0.01" min="0.01" value="${b ? b.limite : ""}"></div>
+    <div class="campo"><div class="etichetta-campo">Categorie</div>
+      ${spese.length ? `<div class="griglia-scelta">${spese.map(c =>
+        `<button class="${stato._budgetSel.includes(c.id) ? "sel" : ""}" onclick="scegliCatBudget(${c.id}, this)">
+          <span class="icona-griglia">${icona(c.icona)}</span>${esc(c.nome)}</button>`).join("")}</div>`
+      : `<div class="avviso">Nessuna categoria di uscita.</div>`}</div>
+    <div class="azioni-modale">
+      <button class="btn-secondario" onclick="chiudiModale()">Annulla</button>
+      <button class="btn-principale" onclick="salvaBudget(${id ?? "null"})">OK</button>
+    </div>`);
+}
+
+// Seleziona/deseleziona una categoria del budget
+function scegliCatBudget(id, btn) {
+  const i = stato._budgetSel.indexOf(id);
+  if (i >= 0) { stato._budgetSel.splice(i, 1); btn.classList.remove("sel"); }
+  else { stato._budgetSel.push(id); btn.classList.add("sel"); }
+}
+
+async function salvaBudget(id) {
+  const nome = document.getElementById("bNome").value.trim();
+  const categorie = [...stato._budgetSel];
+  const limite = parseFloat(String(document.getElementById("bLimite").value).replace(",", "."));
+  if (!nome || !categorie.length || !(limite > 0))
+    return apriModale(`<h3>Budget incompleto</h3>
+      <p class="avviso">Serve un nome, almeno una categoria e un limite di spesa.</p>
+      <button class="btn-principale" onclick="chiudiModale()">OK</button>`);
+  if (id) {
+    const b = dati.budget.find(x => x.id === id);
+    b.nome = nome; b.categorie = categorie; b.limite = arrotonda(limite);
+    await dbSalva("budget", b);
+  } else {
+    // Il nuovo budget nasce in fondo alla pagina (l'ordine si sposta dal menù ⋮)
+    const b = {nome, categorie, limite: arrotonda(limite),
+               ordine: dati.budget.reduce((m, x) => Math.max(m, x.ordine ?? 0), 0) + 1};
+    await dbSalva("budget", b); dati.budget.push(b);
+  }
+  chiudiModale(); render();
+}
+
+function menuBudget(id) {
+  // Menù locale ancorato ai puntini: le voci sono funzioni vere, e le voci
+  // di spostamento non si offrono quando non c'è nulla da scambiare
+  // (primo e ultimo della pagina)
+  const i = dati.budget.findIndex(b => b.id === id);
+  const voci = [{testo: "Modifica", azione: () => apriBudgetModale(id)}];
+  if (i > 0) voci.push({testo: "Sposta sopra", azione: () => spostaBudget(id, -1)});
+  if (i >= 0 && i < dati.budget.length - 1) voci.push({testo: "Sposta sotto", azione: () => spostaBudget(id, 1)});
+  voci.push({testo: "Elimina", azione: () => eliminaBudget(id), pericoloso: true});
+  apriMenuLocale("puntini-budget-" + id, voci);
+}
+
+// Sposta un budget su o giù nell'ordine della pagina Budget: si scambiano i
+// numeri d'ordine dei due vicini (il primo non va sopra, l'ultimo non va
+// sotto). Prima si ridisegna lo schermo e poi si persiste: la scheda si
+// muove subito, e si muove anche se il salvataggio non torna
+async function spostaBudget(id, dir) {
+  const i = dati.budget.findIndex(b => b.id === id), j = i + dir;
+  if (i < 0 || j < 0 || j >= dati.budget.length) return;
+  const mosso = dati.budget[i], vicino = dati.budget[j];
+  [mosso.ordine, vicino.ordine] = [vicino.ordine, mosso.ordine];
+  dati.budget.sort((a, b) => (a.ordine ?? 1e9) - (b.ordine ?? 1e9));   // la pagina segue l'ordine
+  render();
+  await dbSalva("budget", mosso); await dbSalva("budget", vicino);
+}
+
+async function eliminaBudget(id) {
+  await dbElimina("budget", id);
+  dati.budget = dati.budget.filter(b => b.id !== id);
+  render();
+}
+
+/* Tocca un budget: si aprono i Movimenti già filtrati sulle spese delle
+   sue categorie nel periodo corrente. È una schermata a tutti gli effetti:
+   il tasto indietro (e il ✕ del banner) la richiude e torna ai budget */
+function apriBudgetDettaglio(id) {
+  stato.filtro = {tipo: "budget", id: String(id)};
+  storiaApri();
+  vai("movimenti");
+}
+// La voce della cronologia se la toglie storiaTogli, che dal tasto indietro
+// è già un no-op (là la toglie il browser): così il ✕ può riusare questa funzione
+function chiudiBudgetDettaglio() { stato.filtro = null; storiaTogli(); vai("budget"); }
+
+/* ================================================================
+   9. FORM MOVIMENTO (inserimento e modifica)
+   Ai movimenti si assegna una categoria (opzionale).
+   ================================================================ */
+function apriInserimento() {
+  if (stato.pagina !== "form") { stato.dietro = stato.pagina; storiaApri(); }   // la pagina resta visibile dietro
+  stato.pagina = "form";
+  stato.modifica = null;
+  stato.importoStr = ""; stato.direzione = "uscita";
+  // Il conto predefinito deve esistere davvero (protezione da salvataggi falliti in passato)
+  stato.contoSel = conto(dati.impostazioni.contoDefault) ? dati.impostazioni.contoDefault
+                 : dati.conti[0] ? dati.conti[0].id : null;
+  stato.categoria = null;
+  stato._data = null; stato._nota = "";
+  sheetNuovo = true;   // il foglio entra con l'animazione di scorrimento dal basso
+  render();
+}
+
+function apriModifica(id) {
+  const m = dati.movimenti.find(x => x.id === id); if (!m) return;
+  if (stato.pagina !== "form") { stato.dietro = stato.pagina; storiaApri(); }
+  stato.pagina = "form";
+  stato.modifica = id;
+  stato.direzione = m.tipo; stato.contoSel = m.conto;
+  stato.categoria = m.categoria;
+  stato.importoStr = m.importo.toFixed(2).replace(".", ",");
+  stato._data = m.data; stato._nota = m.nota || "";
+  sheetNuovo = true;
+  render();
+}
+
+// Chiude il foglio senza salvare
+function chiudiForm() { vai(stato.dietro); }
+// Chiude il foglio Impostazioni, come il form: si torna da dove si era arrivati
+function chiudiImpostazioni() { vai(stato.dietro); }
+
+// Swipe verso il basso sul foglio in cima: scende e si chiude (solo touch)
+function attivaSwipeFoglio(chiudi = chiudiForm) {
+  const foglio = document.querySelector(".sheet");
+  if (!foglio) return;
+  let y0 = null, tirato = 0;
+
+  foglio.addEventListener("touchstart", e => {
+    y0 = foglio.scrollTop <= 0 ? e.touches[0].clientY : null;   // parte solo se è in cima
+    tirato = 0;
+  }, {passive: true});
+
+  foglio.addEventListener("touchmove", e => {
+    if (y0 === null) return;
+    tirato = e.touches[0].clientY - y0;
+    if (tirato <= 0) { foglio.style.transform = ""; return; }
+    e.preventDefault();   // la pagina dietro non deve scorrere
+    foglio.style.transition = "none";
+    foglio.style.transform = "translateY(" + tirato + "px)";
+  }, {passive: false});
+
+  const fine = () => {
+    if (y0 === null) return;
+    y0 = null;
+    if (tirato > 90) {   // tirato abbastanza: giù e chiuso, senza salvare nulla
+      foglio.style.transition = "transform .22s ease-in";
+      foglio.style.transform = "translateY(100%)";
+      setTimeout(chiudi, 220);
+    } else if (tirato > 0) {   // troppo poco: torna su
+      foglio.style.transition = "transform .2s ease-out";
+      foglio.style.transform = "";
+      setTimeout(() => foglio.style.transition = "", 200);
+    }
+  };
+  foglio.addEventListener("touchend", fine);
+  foglio.addEventListener("touchcancel", fine);
+}
+
+// Swipe orizzontale (solo touch): decide tutto il tratto netto del dito, dalla
+// partenza al rilascio — largo e più largo che alto. Durante il gesto l'asse
+// si dichiara solo "orizzontale" (e anche a metà): il colpo secco col pollice
+// curva un attimo verso il basso prima di correre di lato e non va condannato
+// per quello; il "verticale" non lo dichiara mai il codice, se è davvero scroll
+// il gesto se lo prende il browser e arriva un touchcancel che azzera lo swipe.
+// Ridisegnare durante il tocco farebbe accendere e spegnere di colpo il bottone
+// premuto (la fascia bassa "sussulta"); lo scroll verticale non è disturbato
+function attivaSwipeOrizzontale(el, sinistra, destra) {
+  if (!el) return;
+  let x0 = null, y0 = null, orizzontale = false, scattato = false;
+
+  el.addEventListener("touchstart", e => {
+    x0 = e.touches[0].clientX; y0 = e.touches[0].clientY;
+    orizzontale = false; scattato = false;
+  }, {passive: true});
+
+  el.addEventListener("touchmove", e => {
+    if (x0 === null) return;
+    const dx = e.touches[0].clientX - x0, dy = e.touches[0].clientY - y0;
+    if (!orizzontale && !(Math.abs(dx) > 24 && Math.abs(dx) > Math.abs(dy))) return;
+    orizzontale = true;
+    e.preventDefault();
+  }, {passive: false});
+
+  // A fine gesto conta solo il tratto netto, dalla partenza al rilascio
+  // (changedTouches, la posizione vera del dito — nei gesti veloci l'ultimo
+  // touchmove resta indietro): largo oltre la soglia e più largo che alto.
+  // Chi riporta il dito vicino alla partenza prima di alzarlo annulla.
+  // L'azione parte subito DOPO, fuori dalla consegna dell'evento: cambiare
+  // il DOM dentro il touchend lascia il riconoscitore dei click "spento"
+  // su iPhone e il primo tocco dopo lo swipe non verrebbe registrato
+  // (lo scroll invece sì)
+  const fine = e => {
+    let va = false, verso = false;
+    if (x0 !== null && e.type === "touchend" && e.changedTouches && e.changedTouches[0]) {
+      const xf = e.changedTouches[0].clientX - x0, yf = e.changedTouches[0].clientY - y0;
+      va = Math.abs(xf) > 70 && Math.abs(xf) > Math.abs(yf);
+      verso = xf < 0;
+    }
+    x0 = null; orizzontale = false;
+    if (!va) return;
+    scattato = true;
+    setTimeout(() => verso ? sinistra() : destra(), 0);
+  };
+  el.addEventListener("touchend", fine);
+  el.addEventListener("touchcancel", fine);
+
+  // Assicurazione anti click fantasma: se il browser genera un click per lo
+  // swipe appena finito, non deve raggiungere i pulsanti sotto il dito
+  el.addEventListener("click", e => {
+    if (!scattato) return;
+    scattato = false;
+    e.preventDefault();
+    e.stopPropagation();
+  }, true);
+}
+
+// Sposta il periodo col swipe: verso sinistra quello successivo (come girare
+// pagina, e come il cambio mese del calendario), verso destra il precedente
+function vaiPeriodo(passo) {
+  if (!PAGINE.includes(stato.pagina) || stato._menu || stato._locale) return;   // dietro a fogli e menù niente swipe
+  if (document.getElementById("overlay").className.includes("aperto")) return;   // modale aperta
+  spostaPeriodo(passo);
+}
+
+// Lo swipe dei periodi copre tutto lo schermo (#app: anche testata e menù basso)
+// ed è collegato una volta sola all'avvio: lo stato si legge al momento del gesto
+function attivaSwipePeriodi() {
+  attivaSwipeOrizzontale(document.getElementById("app"),
+    () => vaiPeriodo(1), () => vaiPeriodo(-1));
+}
+
+// Le categorie seguono l'ordine scelto da Daniele, che sposta dai tre puntini
+// in Impostazioni: vale ovunque, perché passa tutto da qui (i conti no:
+// pochi e fissi, ordine di inserimento). Chi è ancora senza numero finisce
+// in coda, a pari merito alfabetico
+const categorieOrdinate = () =>
+  [...dati.categorie].sort((a, b) => (a.ordine ?? 1e9) - (b.ordine ?? 1e9) || a.nome.localeCompare(b.nome, "it"));
+
+// Categorie disponibili per una direzione
+const categorieDi = direzione =>
+  categorieOrdinate().filter(c => c.direzione === direzione);
+
+function corpoForm() {
+  // La categoria scelta deve essere valida per la direzione corrente
+  if (stato.categoria && !categorieDi(stato.direzione).some(c => c.id === stato.categoria))
+    stato.categoria = null;
+
+  const tasti = ["+","7","8","9","−","4","5","6","×","1","2","3","÷","0",",","⌫"];
+  const anima = sheetNuovo; sheetNuovo = false;   // l'animazione scatta solo all'apertura
+  return `<div class="sheet${anima ? " entra" : ""}">
+    <div class="sezioni-form">
+      <div class="toggle-direzione">
+        <button class="entrata ${stato.direzione === "entrata" ? "sel" : ""}" onclick="scegliDirezione('entrata')">Entrata</button>
+        <button class="uscita ${stato.direzione === "uscita" ? "sel" : ""}" onclick="scegliDirezione('uscita')">Uscita</button>
+      </div>
+      <div class="due-colonne">
+        <button class="btn-campo-scelta ${stato.categoria ? "" : "vuota"}" onclick="apriSceltaCategoria()">${
+          stato.categoria ? `${icona(cat(stato.categoria)?.icona)} ${esc(cat(stato.categoria)?.nome ?? "")}`
+                          : "＋ Categoria"
+        }</button>
+        <button type="button" class="btn-data" onclick="apriCalendario()">
+          <span>${dataIt(stato._data || iso(new Date()))}</span>${icona("calendario")}
+        </button>
+      </div>
+      <div class="campo"><div class="etichetta-campo">Conto</div>
+        <div class="chips">${dati.conti.map(c =>
+          `<button class="chip ${stato.contoSel === c.id ? "sel" : ""}" onclick="scegliConto(${c.id})">${icona(c.icona)} ${esc(c.nome)}</button>`).join("")}
+        </div></div>
+    </div>
+    <div class="importo-display">€ ${stato.importoStr || "0"}</div>
+    <div class="nota-attaccata"><input type="text" id="fNota" maxlength="80" placeholder="nota" value="${esc(stato._nota)}"></div>
+    <div class="tastierino">${tasti.map(t =>
+      `<button class="${"+−×÷⌫".includes(t) ? "op" : ""}" onclick="tasto('${t}')">${t}</button>`).join("")}</div>
+    <div class="sezioni-form">
+      <div class="azioni-modale">
+        <button class="btn-secondario" onclick="chiudiForm()">Annulla</button>
+        <button class="btn-principale" onclick="salvaMovimento()">Salva</button>
+      </div>
+      ${stato.modifica ? `<button class="btn-pericoloso" onclick="eliminaMovimento()">${icona("spazzatura")} Elimina movimento</button>` : ""}
+    </div>
+  </div>`;
+}
+
+/* ---- Controlli del form ---- */
+function tasto(t) {
+  let s = stato.importoStr;
+  const coda = () => (s.match(/[\d,]+$/) || [""])[0];   // numero in corso di digitazione
+  if (t === "⌫") s = s.slice(0, -1);
+  else if (t === "+" || t === "−" || t === "×" || t === "÷") {
+    // Un operatore va solo tra due numeri: mai all'inizio, mai doppio
+    if (s && !"+−×÷".includes(s.slice(-1))) s += t;
+  } else if (t === ",") {
+    const n = coda();
+    if (n && !n.includes(",")) s += t;
+    else if (!n) s += "0,";
+  } else {
+    const n = coda();
+    const decimali = n.includes(",") ? n.split(",")[1].length : 0;
+    if (decimali >= 2) return;
+    s = n === "0" ? s.slice(0, -1) + t : s + t;
+  }
+  stato.importoStr = s;
+  document.querySelector(".importo-display").textContent = "€ " + (s || "0");
+}
+
+// Valuta l'espressione del tastierino (numeri con virgola; × e ÷ hanno la precedenza)
+function calcola(s) {
+  const pezzi = s.match(/\d+(?:,\d+)?|[+−×÷]/g) || [];
+  if (!pezzi.length || pezzi.length % 2 === 0) return NaN;   // espressione vuota o incompleta
+  let n = parseFloat(pezzi[0].replace(",", "."));
+  if (isNaN(n)) return NaN;
+  const parziali = [n];
+  for (let i = 1; i < pezzi.length; i += 2) {
+    const v = parseFloat(pezzi[i + 1].replace(",", "."));
+    if (isNaN(v)) return NaN;
+    if (pezzi[i] === "÷" && v === 0) return NaN;   // divisione per zero
+    if (pezzi[i] === "×") parziali[parziali.length - 1] *= v;
+    else if (pezzi[i] === "÷") parziali[parziali.length - 1] /= v;
+    else parziali.push(pezzi[i] === "+" ? v : -v);
+  }
+  return arrotonda(parziali.reduce((a, b) => a + b, 0));
+}
+
+function scegliDirezione(d) {
+  stato.direzione = d;
+  leggiCampiTesto(); render();
+}
+
+function scegliConto(id) { stato.contoSel = id; leggiCampiTesto(); render(); }
+
+// Schermata di scelta categoria: griglia di pulsanti (4 per riga)
+function apriSceltaCategoria() {
+  leggiCampiTesto();
+  const cats = categorieDi(stato.direzione);
+  apriModale(`<h3>Categoria</h3>
+    ${cats.length ? `<div class="griglia-scelta">${cats.map(c =>
+      `<button class="${stato.categoria === c.id ? "sel" : ""}" onclick="scegliCategoria(${c.id})">
+        <span class="icona-griglia">${icona(c.icona)}</span>${esc(c.nome)}</button>`).join("")}</div>`
+    : `<div class="avviso">Nessuna categoria per questa direzione.</div>`}
+    <button class="btn-secondario" onclick="chiudiModale();apriNuovoTag('categoria','form')">＋ Nuova categoria</button>
+    <button class="btn-secondario" onclick="scegliCategoria(null)">Nessuna categoria</button>
+  `);
+}
+
+function scegliCategoria(id) {
+  stato.categoria = id;
+  chiudiModale(); leggiCampiTesto(); render();
+}
+
+// Conserva la nota digitata attraverso i re-render del form
+function leggiCampiTesto() {
+  const n = document.getElementById("fNota");
+  if (n) stato._nota = n.value;
+}
+
+// Calendario generico: data del movimento (senza limiti), chiusura del
+// periodo o modifica di un periodo (solo giorni validi: min e max in ISO)
+function apriCalendario(contesto, extra) {
+  leggiCampiTesto();
+  stato._cal = contesto
+    ? {contesto, min: null, max: null, ...extra}
+    : {contesto: "movimento", data: stato._data, min: null, max: null};
+  const d = new Date((stato._cal.data || iso(new Date())) + "T12:00:00");
+  stato._calAnno = d.getFullYear(); stato._calMese = d.getMonth();
+  renderCalendario();
+}
+
+function spostaCalendario(dir) {
+  stato._calMese += dir;
+  if (stato._calMese < 0)  { stato._calMese = 11; stato._calAnno--; }
+  if (stato._calMese > 11) { stato._calMese = 0;  stato._calAnno++; }
+  // Il mese nuovo entra scivolando come i periodi: la direzione la dice il gesto
+  stato._calDir = dir > 0 ? "entra-dx" : "entra-sx";
+  renderCalendario();
+}
+
+function renderCalendario() {
+  const anno = stato._calAnno, mese = stato._calMese, c = stato._cal;
+  const inizio = (new Date(anno, mese, 1).getDay() + 6) % 7;   // la settimana parte dal lunedì
+  const giorni = new Date(anno, mese + 1, 0).getDate();
+  const oggiIso = iso(new Date());
+  let celle = ["L","M","M","G","V","S","D"].map(x => `<span class="cal-testa">${x}</span>`).join("");
+  for (let i = 0; i < inizio; i++) celle += "<span></span>";
+  for (let g = 1; g <= giorni; g++) {
+    const isoGiorno = iso(new Date(anno, mese, g));
+    // Giorno fuori dai limiti d'uso: visibile ma non scegliibile
+    if ((c.min && isoGiorno < c.min) || (c.max && isoGiorno > c.max)) {
+      celle += `<button disabled>${g}</button>`;
+      continue;
+    }
+    celle += `<button class="${isoGiorno === c.data ? "sel" : isoGiorno === oggiIso ? "oggi" : ""}" onclick="scegliData('${isoGiorno}')">${g}</button>`;
+  }
+  // Rettangolo di dimensione fissa: le settimane mancanti si riempiono di
+  // celle vuote fino alla sesta (il massimo che un mese può occupare)
+  for (let i = inizio + giorni; i < 42; i++) celle += "<span></span>";
+  apriModale(`
+    <div class="cal-testata">
+      <button class="btn-freccia" onclick="spostaCalendario(-1)">‹</button>
+      <span class="mese">${cap(MESI[mese])} ${anno}</span>
+      <button class="btn-freccia" onclick="spostaCalendario(1)">›</button>
+    </div>
+    <div class="cal-grid${stato._calDir ? " " + stato._calDir : ""}">${celle}</div>`, "centrata");
+  stato._calDir = null;   // consumato: all'apertura e alle scelte la griglia non anima
+  // Swipe per cambiare mese, come le frecce della testata
+  attivaSwipeOrizzontale(document.querySelector(".cal-grid"),
+    () => spostaCalendario(1), () => spostaCalendario(-1));
+}
+
+function scegliData(g) {
+  const c = stato._cal || {contesto: "movimento"};
+  chiudiModale();
+  if (c.contesto === "chiusura") return chiudiPeriodo(g);
+  if (c.contesto === "periodo") return applicaDataPeriodo(c.indice, c.campo, g);
+  stato._data = g;
+  render();
+}
+
+async function salvaMovimento() {
+  const importo = calcola(stato.importoStr);
+  if (!(importo > 0) || !Number.isFinite(importo))
+    return apriModale(`<h3>Importo non valido</h3>
+      <p class="avviso">Digita un importo completo con il tastierino.</p>
+      <button class="btn-principale" onclick="chiudiModale()">OK</button>`);
+  leggiCampiTesto();
+  const m = {
+    tipo: stato.direzione, importo: arrotonda(importo),
+    data: stato._data || iso(new Date()),
+    nota: stato._nota.trim() || null,
+    conto: stato.contoSel || dati.impostazioni.contoDefault,
+    categoria: stato.categoria
+  };
+  if (stato.modifica) {
+    m.id = stato.modifica;
+    await dbSalva("movimenti", m);
+    const i = dati.movimenti.findIndex(x => x.id === m.id);
+    dati.movimenti[i] = m;
+  } else {
+    await dbSalva("movimenti", m);
+    dati.movimenti.push(m);
+  }
+  vai(stato.dietro);   // il foglio si chiude sulla pagina da cui era partito
+}
+
+function eliminaMovimento() {
+  apriConferma("Eliminare questo movimento?", async () => {
+    await dbElimina("movimenti", stato.modifica);
+    dati.movimenti = dati.movimenti.filter(m => m.id !== stato.modifica);
+    chiudiModale(); vai(stato.dietro);
+  });
+}
+
+/* ================================================================
+   10. CREAZIONE / MODIFICA DI CATEGORIE E CONTI
+   ================================================================ */
+function apriNuovoTag(tipo, contesto, idEsistente) {
+  const esiste = idEsistente ? (tipo === "conto" ? conto(idEsistente) : cat(idEsistente)) : null;
+  // L'icona è solo una delle ICONE: se il record ne porta una sconosciuta, si riparte dalla prima
+  const ic = esiste && ICONE.includes(esiste.icona) ? esiste.icona : ICONE_RAPIDE[0];
+  stato._tag = {tipo, contesto, id: idEsistente || null, icona: ic,
+                pagina: Math.floor(Math.max(0, ICONE_DEL_PICKER.indexOf(ic)) / 30)};   // si parte dalla pagina dell'icona già scelta
+
+  let corpo = `
+    <div class="campo"><div class="etichetta-campo">Nome</div>
+      <input type="text" id="tNome" maxlength="30" value="${esiste ? esc(esiste.nome) : ""}" placeholder="Es. Palestra"></div>
+    <div class="campo"><div class="etichetta-campo">Icona</div>
+      <div id="pannelloIcone">${pannelloIconeHtml()}</div></div>`;
+
+  if (tipo === "categoria") {
+    corpo += `
+      <div class="campo"><div class="etichetta-campo">Direzione</div>
+        <div class="toggle-direzione">
+          <button class="uscita ${(!esiste || esiste.direzione === "uscita") ? "sel" : ""}" id="tDirU" onclick="scegliDirTag('uscita')">Uscita</button>
+          <button class="entrata ${esiste && esiste.direzione === "entrata" ? "sel" : ""}" id="tDirE" onclick="scegliDirTag('entrata')">Entrata</button>
+        </div></div>`;
+  }
+
+  const titoli = {conto: esiste ? "Modifica conto" : "Nuovo conto",
+                  categoria: esiste ? "Modifica categoria" : "Nuova categoria"};
+  apriModale(`<h3>${titoli[tipo]}</h3>
+    ${corpo}
+    <div class="azioni-modale">
+      <button class="btn-secondario" onclick="chiudiModale()">Annulla</button>
+      <button class="btn-principale" onclick="salvaTag()">Salva</button>
+    </div>`);
+}
+
+function scegliDirTag(d) {
+  document.getElementById("tDirU").classList.toggle("sel", d === "uscita");
+  document.getElementById("tDirE").classList.toggle("sel", d === "entrata");
+}
+
+function scegliIcona(i, btn) {
+  stato._tag.icona = i;
+  btn.parentElement.querySelectorAll("button").forEach(b => b.classList.remove("sel"));
+  btn.classList.add("sel");
+}
+
+/* Il selettore icone mostra 30 disegni per pagina: le frecce scorrono
+   ICONE_DEL_PICKER senza chiudere la modale né perdere il nome digitato */
+function pannelloIconeHtml() {
+  const per = 30, pag = stato._tag.pagina || 0;
+  const pagine = Math.ceil(ICONE_DEL_PICKER.length / per);
+  const blocco = ICONE_DEL_PICKER.slice(pag * per, (pag + 1) * per);
+  return `<div class="griglia-icone">${blocco.map(i =>
+      `<button class="${stato._tag.icona === i ? "sel" : ""}" onclick="scegliIcona('${i}', this)">${icona(i)}</button>`).join("")}</div>
+    <div class="nav-icone">
+      <button ${pag === 0 ? "disabled" : ""} onclick="paginaIcone(-1)" aria-label="Pagina precedente">‹</button>
+      <span>${pag + 1}/${pagine}</span>
+      <button ${pag === pagine - 1 ? "disabled" : ""} onclick="paginaIcone(1)" aria-label="Pagina successiva">›</button>
+    </div>`;
+}
+function paginaIcone(d) {
+  const per = 30, pagine = Math.ceil(ICONE_DEL_PICKER.length / per);
+  // Mai oltre l'ultima pagina: le frecce si fermano ai bordi
+  stato._tag.pagina = Math.min(pagine - 1, Math.max(0, (stato._tag.pagina || 0) + d));
+  const p = document.getElementById("pannelloIcone");
+  if (p) p.innerHTML = pannelloIconeHtml();
+}
+
+async function salvaTag() {
+  const t = stato._tag;
+  const nome = document.getElementById("tNome").value.trim();
+  const ic = stato._tag.icona || "etichetta";
+  if (!nome) return;
+
+  if (t.tipo === "conto") {
+    if (t.id) {
+      const c = conto(t.id); c.nome = nome; c.icona = ic;
+      await dbSalva("conti", c);
+    } else {
+      const c = {nome, icona: ic};
+      await dbSalva("conti", c); dati.conti.push(c);
+      if (stato.pagina === "form") stato.contoSel = c.id;   // preselezione nel form movimento
+    }
+    chiudiModale(); return aggiornaDopoTag(null);
+  }
+
+  // Categoria
+  const dir = document.getElementById("tDirE").classList.contains("sel") ? "entrata" : "uscita";
+  let c = t.id ? cat(t.id) : null;
+
+  if (c) {   // modifica
+    c.nome = nome; c.icona = ic; c.direzione = dir;
+    await dbSalva("categorie", c);
+    chiudiModale(); return aggiornaDopoTag(null);
+  }
+
+  // Creazione: la nuova categoria nasce in fondo alla lista (l'ordine si sposta da Impostazioni)
+  // e prende il primo slot colore libero, così la torta non ne ruba uno a chi c'è già
+  c = {nome, icona: ic, direzione: dir, colore: slotLibero(),
+       ordine: dati.categorie.reduce((m, x) => Math.max(m, x.ordine ?? 0), 0) + 1};
+  await dbSalva("categorie", c); dati.categorie.push(c);
+  chiudiModale(); aggiornaDopoTag(c);
+}
+
+// Dopo la creazione/modifica di un tag: aggiorna la schermata di provenienza
+function aggiornaDopoTag(nuovaCat) {
+  if (stato._tag.contesto === "form" && stato.pagina === "form" && nuovaCat) {
+    stato.categoria = nuovaCat.id;   // preseleziona la categoria appena creata
+    stato.direzione = nuovaCat.direzione === "entrata" ? "entrata" : "uscita";
+  }
+  render();
+}
+
+/* ================================================================
+   11. IMPOSTAZIONI
+   Periodi · Backup · Categorie · Conti
+   ================================================================ */
+function foglioImpostazioni() {
+  const imp = dati.impostazioni;
+  const opz = (valore, etichetta) =>
+    `<button class="${imp.periodoModalita === valore ? "sel" : ""}" onclick="scegliPeriodo('${valore}')">${etichetta}</button>`;
+
+  // Sezione categorie (nell'ordine scelto da Daniele); compresse di default
+  const listaCats = !stato._apriCats ? "" : categorieOrdinate().map(c => `
+    <div class="nodo">
+      ${icona(c.icona)}
+      <span class="nome">${esc(c.nome)}</span>
+      <button class="tre-punti" id="puntini-cat-${c.id}" onclick="menuCategoria(${c.id})">⋮</button>
+    </div>`).join("");
+
+  const contiLista = !stato._apriConti ? "" : dati.conti.map(c => `
+    <div class="nodo">
+      ${icona(c.icona)}
+      <span class="nome">${esc(c.nome)}</span>
+      <button class="tre-punti" id="puntini-conto-${c.id}" onclick="menuConto(${c.id})">⋮</button>
+    </div>`).join("");
+
+  const anima = sheetNuovo; sheetNuovo = false;   // l'animazione scatta solo all'apertura
+  return `<div class="sheet${anima ? " entra" : ""}">
+    <div class="intestazione-pagina">
+      <button class="btn-freccia" onclick="chiudiImpostazioni()">‹</button>
+      <h2>Impostazioni</h2>
+    </div>
+    <div class="pag-impostazioni">
+
+      <div class="gruppo"><div class="titolo-gruppo">Aspetto</div>
+        <div class="riga-tema">
+          <span class="nome-opzione">Tema scuro</span>
+          <button class="interruttore${imp.temaScuro ? " on" : ""}" onclick="toggleTema()" aria-label="Tema scuro"></button>
+        </div>
+      </div>
+
+      <div class="gruppo"><div class="titolo-gruppo">Periodi</div>
+        <div class="lista-scelta">
+          ${opz("settimanale", "Settimanale")}
+          ${opz("mensile", "Mensile solare")}
+          ${opz("libero", "Libero")}
+        </div>
+        ${imp.periodoModalita === "libero" ? `<button class="btn-testo" onclick="vai('periodi')">${icona("calendario")} Modifica periodi</button>` : ""}
+      </div>
+
+      <div class="gruppo">
+        <button class="titolo-gruppo bottone-gruppo${stato._apriCats ? " aperta" : ""}" onclick="toggleSezione('cats')" aria-expanded="${stato._apriCats ? "true" : "false"}">Categorie ${icona("chevron-giu")}</button>
+        ${stato._apriCats ? `<div class="albero">${listaCats}</div>
+        <button class="btn-testo" onclick="apriNuovoTag('categoria','gestione')">${icona("piu")} Nuova categoria</button>` : ""}
+      </div>
+
+      <div class="gruppo">
+        <button class="titolo-gruppo bottone-gruppo${stato._apriConti ? " aperta" : ""}" onclick="toggleSezione('conti')" aria-expanded="${stato._apriConti ? "true" : "false"}">Conti ${icona("chevron-giu")}</button>
+        ${stato._apriConti ? `<div class="albero">${contiLista}</div>
+        <button class="btn-testo" onclick="apriNuovoTag('conto','gestione')">${icona("piu")} Nuovo conto</button>` : ""}
+      </div>
+
+      <div class="gruppo"><div class="titolo-gruppo">Dati</div>
+        <div class="riga-tema">
+          <span class="nome-opzione">Backup automatico</span>
+          <button class="interruttore${imp.backupAuto === false ? "" : " on"}" onclick="toggleBackupAuto()" aria-label="Backup automatico"></button>
+        </div>
+        ${dati.backup.length ? `<div class="lista-backup">
+          ${dati.backup.map(b => `<div class="riga-backup"><span>${quandoBackup(b)}</span><button class="btn-testo ripristina" onclick="ripristinaBackup(${b.id})">Ripristina</button></div>`).join("")}
+        </div>` : ""}
+        <button class="btn-testo" onclick="esportaJSON()">${icona("scarica")} Esporta backup (JSON)</button>
+        <button class="btn-testo" onclick="esportaCSV()">${icona("scarica")} Esporta movimenti (CSV)</button>
+        <button class="btn-testo" onclick="document.getElementById('fileImport').click()">${icona("carica")} Importa backup (JSON)</button>
+        <input type="file" id="fileImport" accept=".json,application/json" style="display:none" onchange="importaJSON(this)">
+        <button class="btn-testo" onclick="caricaEsempio()">${icona("provetta")} Carica dati di esempio</button>
+        <button class="btn-testo rosso" onclick="cancellaTutto()">${icona("spazzatura")} Cancella tutti i dati</button>
+      </div>
+
+    </div>
+  </div>`;
+}
+
+/* ---- Tema: chiaro di giorno, scuro di notte, come dice il sistema.
+   L'interruttore forza lo scuro e la scelta viaggia con le impostazioni ---- */
+// matchMedia può mancare (anteprima): si resta sul chiaro, salvo forzatura
+const temaAttivoScuro = () => dati.impostazioni?.temaScuro === true
+  || (dati.impostazioni?.temaScuro !== false
+      && (window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)").matches : false));
+
+function applicaTema() {
+  const scuro = temaAttivoScuro();
+  // Nell'anteprima senza DOM vero documentElement non esiste: si salta e basta
+  if (document.documentElement) document.documentElement.toggleAttribute("data-scuro", scuro);
+  const meta = document.getElementById("metaTema");
+  if (meta) meta.content = scuro ? "#0f141a" : "#f8fafc";
+}
+
+async function toggleTema() {
+  dati.impostazioni.temaScuro = !dati.impostazioni.temaScuro;
+  applicaTema();   // prima lo schermo, poi il disco
+  renderTenendoIlFoglio();
+  await salvaImpostazioni();
+}
+
+/* Il backup automatico: acceso di default (spento si salva esplicito).
+   L'interruttore comanda solo le istantanee di periodo; quelle di
+   sicurezza prima di una sostituzione restano sempre */
+async function toggleBackupAuto() {
+  const acceso = dati.impostazioni.backupAuto !== false;   // assente = acceso
+  dati.impostazioni.backupAuto = !acceso;
+  renderTenendoIlFoglio();
+  await salvaImpostazioni();
+}
+
+/* I tre puntini di un conto in Impostazioni: come categoria e budget */
+function menuConto(id) {
+  apriMenuLocale("puntini-conto-" + id, [
+    {testo: "Modifica", azione: () => apriNuovoTag("conto", "gestione", id)},
+    {testo: "Elimina", azione: () => apriEliminaConto(id), pericoloso: true}
+  ]);
+}
+
+/* Categorie e Conti in Impostazioni: sezioni comprimibili, chiuse di default */
+function toggleSezione(q) {
+  if (q === "cats") stato._apriCats = !stato._apriCats;
+  else if (q === "conti") stato._apriConti = !stato._apriConti;
+  renderTenendoIlFoglio();
+}
+
+async function scegliPeriodo(v) {
+  if (v === "libero" && dati.impostazioni.periodoModalita !== "libero")
+    await attivaLibero(false);   // la prima volta genera i periodi, poi li riprende
+  dati.impostazioni.periodoModalita = v;
+  stato.offset = 0; stato._menu = false;
+  await salvaImpostazioni();
+  render();
+}
+
+/* ---- Modifica periodi (solo Libero) ---- */
+function renderPeriodi() {
+  const ps = periodiOrdinati();
+  // Data completa, sempre con l'anno
+  const breve = s => { const d = new Date(s + "T12:00:00");
+    return d.getDate() + " " + MESI_BREVI[d.getMonth()] + " " + d.getFullYear(); };
+
+  let chiusi = "";
+  for (let i = ps.length - 1; i >= 0; i--) chiusi += `
+    <div class="riga-periodo">
+      <button class="btn-campo-scelta" onclick="apriCalPeriodo(${i},'inizio')">${breve(ps[i].inizio)}</button>
+      <span class="trattino">–</span>
+      <button class="btn-campo-scelta" onclick="apriCalPeriodo(${i},'fine')">${breve(ps[i].fine)}</button>
+    </div>`;
+
+  document.getElementById("app").innerHTML = `
+    <div class="intestazione-pagina">
+      <button class="btn-freccia" onclick="vai('impostazioni')">‹</button>
+      <h2>Modifica periodi</h2>
+    </div>
+    <div class="pag-impostazioni">
+      <div class="giorno">Periodo aperto (fino a oggi)</div>
+      <div class="riga-periodo aperta">
+        <button class="btn-campo-scelta fermo">Apertura: ${breve(dati.impostazioni.liberoInizio)}</button>
+      </div>
+      ${ps.length ? `<div class="giorno">Periodi chiusi</div>` : ""}
+      ${chiusi || `<div class="avviso">Nessun periodo chiuso per ora.</div>`}
+    </div>`;
+}
+
+// Limiti del calendario: solo date che mantengano ogni periodo di almeno un giorno
+function apriCalPeriodo(i, campo) {
+  const ps = periodiOrdinati();
+  let data, min, max;
+  if (campo === "inizio") {        // apertura di un chiuso
+    data = ps[i].inizio;
+    min = i > 0 ? domaniDi(ps[i - 1].inizio) : null;
+    max = ps[i].fine;
+  } else {                         // chiusura di un chiuso
+    data = ps[i].fine;
+    min = ps[i].inizio;
+    max = i < ps.length - 1 ? ieriDi(ps[i + 1].fine) : iso(new Date());
+  }
+  apriCalendario("periodo", {indice: i, campo, data, min, max});
+}
+
+// Applica la nuova data spostando il confine del vicino (mai buchi/sovrapposizioni)
+async function applicaDataPeriodo(i, campo, g) {
+  const ps = periodiOrdinati();
+  if (campo === "inizio") {        // confine col chiuso precedente
+    ps[i].inizio = g;
+    if (i > 0) ps[i - 1].fine = ieriDi(g);
+  } else {                         // confine col periodo successivo
+    ps[i].fine = g;
+    if (i < ps.length - 1) ps[i + 1].inizio = domaniDi(g);
+    else dati.impostazioni.liberoInizio = domaniDi(g);   // l'aperto segue l'ultimo chiuso
+  }
+  for (const p of dati.periodi) await dbSalva("periodi", p);
+  await salvaImpostazioni();
+  renderPeriodi();
+}
+
+/* ---- Eliminazione sicura di categorie ---- */
+/* I tre puntini di una categoria in Impostazioni: tutto quello che le si può
+   fare sta qui dentro, come per i budget */
+function menuCategoria(id) {
+  // Menù locale ancorato ai puntini: le voci sono funzioni vere, e le voci
+  // di spostamento non si offrono quando non c'è nulla da scambiare
+  // (prima e ultima della lista)
+  const lista = categorieOrdinate();
+  const i = lista.findIndex(c => c.id === id);
+  const voci = [{testo: "Modifica", azione: () => apriNuovoTag("categoria", "gestione", id)}];
+  if (i > 0) voci.push({testo: "Sposta sopra", azione: () => spostaCategoria(id, -1)});
+  if (i >= 0 && i < lista.length - 1) voci.push({testo: "Sposta sotto", azione: () => spostaCategoria(id, 1)});
+  voci.push({testo: "Elimina", azione: () => apriEliminaCategoria(id), pericoloso: true});
+  apriMenuLocale("puntini-cat-" + id, voci);
+}
+
+// Sposta una categoria su o giù nell'ordine scelto (lo stesso che si vede in
+// Impostazioni e poi ovunque): si scambiano i numeri d'ordine dei due vicini.
+// La prima non va sopra, l'ultima non va sotto. Prima si ridisegna lo schermo
+// (col foglio che tiene il suo scroll) e poi si persiste
+async function spostaCategoria(id, dir) {
+  const lista = categorieOrdinate();
+  const i = lista.findIndex(c => c.id === id), j = i + dir;
+  if (i < 0 || j < 0 || j >= lista.length) return;
+  const mosso = lista[i], vicino = lista[j];
+  [mosso.ordine, vicino.ordine] = [vicino.ordine, mosso.ordine];
+  renderTenendoIlFoglio();
+  await dbSalva("categorie", mosso); await dbSalva("categorie", vicino);
+}
+
+function apriEliminaCategoria(id) {
+  const c = cat(id);
+  const usi = dati.movimenti.filter(m => m.categoria === id);
+
+  if (!usi.length) return apriConferma(`Eliminare "${esc(c.nome)}"?`, async () => {
+    await eliminaCategoria(id, null);
+    chiudiModale(); render();
+  });
+
+  // Alternative di riassegnazione: categorie della stessa direzione, alfabetiche
+  const alternative = categorieDi(c.direzione).filter(x => x.id !== id);
+  stato._destCat = null;
+  apriModale(`<h3>Eliminare "${esc(c.nome)}"?</h3>
+    <p class="avviso">Ha ${usi.length} moviment${usi.length === 1 ? "o" : "i"} associat${usi.length === 1 ? "o" : "i"}.</p>
+    <div class="campo"><div class="etichetta-campo">Cosa fare con quei movimenti?</div>
+      <div class="lista-scelta">
+        <button class="sel" onclick="scegliDestCat(null, this)">Rimuovi il tag dai movimenti</button>
+        ${alternative.map(a => `<button onclick="scegliDestCat(${a.id}, this)">Riassegna a: ${icona(a.icona)} ${esc(a.nome)}</button>`).join("")}
+      </div></div>
+    <div class="azioni-modale">
+      <button class="btn-secondario" onclick="chiudiModale()">Annulla</button>
+      <button class="btn-pericoloso" onclick="confermaEliminaCategoria(${id})">Elimina</button>
+    </div>`);
+}
+
+// Sceglie la destinazione dei movimenti durante l'eliminazione di una categoria
+function scegliDestCat(id, btn) {
+  stato._destCat = id;
+  btn.parentElement.querySelectorAll("button").forEach(b => b.classList.remove("sel"));
+  btn.classList.add("sel");
+}
+
+async function confermaEliminaCategoria(id) {
+  await eliminaCategoria(id, stato._destCat);
+  chiudiModale(); render();
+}
+
+async function eliminaCategoria(id, destinazione) {
+  // Aggiorna i movimenti che referenziano la categoria eliminata
+  for (const m of dati.movimenti.filter(m => m.categoria === id)) {
+    m.categoria = destinazione || null;
+    await dbSalva("movimenti", m);
+  }
+  // I budget perdono la categoria; senza categorie rimaste si eliminano
+  for (const b of [...dati.budget].filter(b => b.categorie.includes(id))) {
+    b.categorie = b.categorie.filter(x => x !== id);
+    if (b.categorie.length) { await dbSalva("budget", b); continue; }
+    await dbElimina("budget", b.id);
+    dati.budget = dati.budget.filter(x => x.id !== b.id);
+  }
+
+  await dbElimina("categorie", id);
+  dati.categorie = dati.categorie.filter(x => x.id !== id);
+}
+
+/* ---- Eliminazione sicura di conti ---- */
+function apriEliminaConto(id) {
+  const c = conto(id);
+  const usi = dati.movimenti.filter(m => m.conto === id);
+  const alternative = dati.conti.filter(x => x.id !== id);
+  if (!alternative.length) return apriModale(`<h3>Impossibile eliminare</h3>
+    <p class="avviso">È l'unico conto presente: ogni movimento richiede un conto.</p>
+    <button class="btn-principale" onclick="chiudiModale()">OK</button>`);
+  if (usi.length) stato._destConto = alternative[0].id;   // destinazione predefinita
+  apriModale(`<h3>Eliminare "${esc(c.nome)}"?</h3>
+    ${usi.length ? `<p class="avviso">Ha ${usi.length} moviment${usi.length === 1 ? "o" : "i"} associat${usi.length === 1 ? "o" : "i"}.</p>
+    <div class="campo"><div class="etichetta-campo">Riassegna quei movimenti a:</div>
+      <div class="lista-scelta">
+        ${alternative.map(a => `<button class="${a.id === alternative[0].id ? "sel" : ""}" onclick="scegliDestConto(${a.id}, this)">${icona(a.icona)} ${esc(a.nome)}</button>`).join("")}
+      </div></div>` : `<p class="avviso">Nessun movimento associato.</p>`}
+    <div class="azioni-modale">
+      <button class="btn-secondario" onclick="chiudiModale()">Annulla</button>
+      <button class="btn-pericoloso" onclick="confermaEliminaConto(${id})">Elimina</button>
+    </div>`);
+}
+
+// Sceglie il conto di destinazione durante l'eliminazione di un conto
+function scegliDestConto(id, btn) {
+  stato._destConto = id;
+  btn.parentElement.querySelectorAll("button").forEach(b => b.classList.remove("sel"));
+  btn.classList.add("sel");
+}
+
+async function confermaEliminaConto(id) {
+  const dest = stato._destConto ?? null;
+  for (const m of dati.movimenti.filter(m => m.conto === id)) {
+    m.conto = dest;
+    await dbSalva("movimenti", m);
+  }
+  if (dati.impostazioni.contoDefault === id) {
+    dati.impostazioni.contoDefault = dati.conti.find(c => c.id !== id).id;
+    await salvaImpostazioni();
+  }
+  await dbElimina("conti", id);
+  dati.conti = dati.conti.filter(c => c.id !== id);
+  chiudiModale(); render();
+}
+
+/* ================================================================
+   12. EXPORT / IMPORT
+   ================================================================ */
+function scarica(nome, contenuto, tipo) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([contenuto], {type: tipo}));
+  a.download = nome;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+
+// Conferma corta che galleggia un attimo sopra la barra di navigazione
+function toast(testo) {
+  if (!document.body || !document.body.appendChild) return;   // anteprima senza DOM
+  const t = document.createElement("div");
+  t.className = "toast";
+  t.textContent = testo;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2600);
+}
+
+/* Se l'archivio del telefono (IndexedDB) non risponde — non dovrebbe mai
+   succedere, ma meglio saperlo — un banner sopra la barra di navigazione
+   avverte che ogni modifica vive solo in memoria e sparisce chiudendo l'app */
+let bannerMemoriaEl = null;
+function bannerMemoria() {
+  if (db || !document.body || !document.body.appendChild) return;
+  const b = document.createElement("div");
+  b.id = "banner-memoria";
+  b.className = "banner-memoria";
+  b.innerHTML = '<svg class="ico" aria-hidden="true"><use href="#i-attenzione"/></svg>' +
+    '<span><strong>Memoria temporanea.</strong> L\'archivio del telefono non risponde: ' +
+    'le modifiche spariscono chiudendo l\'app. Un export manuale mette i dati al sicuro.</span>' +
+    '<button class="x-banner" aria-label="Chiudi l\'avviso" onclick="chiudiBannerMemoria()">✕</button>';
+  document.body.appendChild(b);
+  bannerMemoriaEl = b;
+}
+function chiudiBannerMemoria() { if (bannerMemoriaEl) bannerMemoriaEl.classList.add("nascosto"); }
+
+/* Il corpo del backup: quello che viaggia nell'export manuale e dentro
+   le istantanee automatiche (stesso formato versione 3, così un'istantanea
+   si può anche importare da fuori come un backup qualunque) */
+const corpoBackup = () => ({versione: 3, esportatoIl: iso(new Date()),
+  movimenti: dati.movimenti, categorie: dati.categorie, conti: dati.conti,
+  budget: dati.budget, periodi: dati.periodi, impostazioni: {...dati.impostazioni}});
+
+function esportaJSON() {
+  scarica(`finanze_backup_${iso(new Date())}.json`, JSON.stringify(corpoBackup(), null, 2), "application/json");
+  toast("Backup esportato");
+}
+
+/* ---- Backup automatici (interruttore in Impostazioni → Dati) ----
+   Al massimo TRE istantanee, dentro l'app (collezione "backup"): salvano
+   da bug, import pasticciati e ripensamenti. NON salvano dalla pulizia
+   del browser: l'unica copia fuori dall'app resta l'esportazione manuale
+   (che non viene mai toccata: è un file scaricato, la rotazione riguarda
+   solo le istantanee). Scatti:
+   - "periodo": all'avvio, se l'ultima istantanea non è già di questo
+     periodo — così in Settimanale e Mensile, che non si chiudono a mano,
+     il cambio di mese/settimana fa la sua fotografia;
+   - "chiusura": chiudendo un periodo in Libero, prima che il nuovo aperto
+     compaia (l'etichetta è il periodo che INIZIA: il giorno dopo l'avvio
+     non ne fa una gemella);
+   - "sicurezza": SEMPRE, anche a interruttore spento, prima di sostituire
+     tutti i dati (import, ripristino, dati di esempio): lo stato di prima
+     resta recuperabile. Il motivo viaggia nel record (diagnostica), in
+     pagina si vede solo la data: le diciture non aggiungono nulla */
+const quandoBackup = b => { const d = new Date(b.quando);
+  return d.getDate() + " " + MESI_BREVI[d.getMonth()] + " " + d.getFullYear()
+    + ", " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); };
+
+async function backupAuto(tipo) {
+  const b = {quando: Date.now(), motivo: tipo};
+  if (tipo !== "sicurezza") {   // le istantanee di periodo: interruttore e una sola per periodo
+    if (dati.impostazioni?.backupAuto === false) return;
+    b.inizio = iso(periodo().da);
+    if (dati.backup.some(x => x.inizio === b.inizio)) return;
+  }
+  b.dati = JSON.stringify(corpoBackup());
+  await dbSalva("backup", b); dati.backup.push(b);
+  // Rotazione: al massimo tre, il più vecchio se ne va
+  while (dati.backup.length > 3) {
+    const vecchio = dati.backup.reduce((m, x) => x.quando < m.quando ? x : m);
+    await dbElimina("backup", vecchio.id);
+    dati.backup = dati.backup.filter(x => x.id !== vecchio.id);
+  }
+}
+
+// Campo CSV: i valori che iniziano con = + - @ potrebbero essere letti come
+// formule da un foglio di calcolo, quindi vengono anticipati da un apice.
+// Poi, se restano separatori o virgolette, il campo va racchiuso.
+const escapeCSV = s => {
+  s = String(s ?? "");
+  if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+  return /[;",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+};
+
+function esportaCSV() {
+  const nome = id => { const c = cat(id) || conto(id); return c ? escapeCSV(c.nome) : ""; };
+  const righe = ["Data;Direzione;Importo;Categoria;Conto;Nota"];
+  for (const m of [...dati.movimenti].sort((a, b) => a.data.localeCompare(b.data)))
+    righe.push([escapeCSV(m.data), m.tipo, m.importo.toFixed(2).replace(".", ","),
+      nome(m.categoria), nome(m.conto), escapeCSV(m.nota || "")].join(";"));
+  scarica(`finanze_movimenti_${iso(new Date())}.csv`, "\ufeff" + righe.join("\r\n"), "text/csv");
+}
+
+function importaJSON(input) {
+  const file = input.files[0]; if (!file) return;
+  // Un backup vero pesa pochi MB: un file enorme non è un backup, e
+  // leggerlo tutto solo per scoprirlo congelerebbe il telefono
+  if (file.size > 10 * 1024 * 1024) {
+    apriModale(`<h3>File non valido</h3><p class="avviso">Il file è troppo grande per essere un backup.</p>
+      <button class="btn-principale" onclick="chiudiModale()">OK</button>`);
+    input.value = "";
+    return;
+  }
+  const fr = new FileReader();
+  fr.onload = () => {
+    let b;
+    try {
+      b = JSON.parse(fr.result);
+      if (!Array.isArray(b.movimenti) || !Array.isArray(b.categorie)) throw new Error();
+    } catch {
+      apriModale(`<h3>File non valido</h3><p class="avviso">Il file non è un backup riconosciuto.</p>
+        <button class="btn-principale" onclick="chiudiModale()">OK</button>`);
+      input.value = "";
+      return;
+    }
+    apriConferma("Importare il backup? I dati attuali verranno sostituiti.", async () =>
+      await sostituisciDati(b, "Importazione non riuscita"));
+    input.value = "";
+  };
+  fr.readAsText(file);
+}
+
+/* Il ripristino di un'istantanea automatica: la stessa strada dell'import */
+function ripristinaBackup(id) {
+  const b = dati.backup.find(x => x.id === id); if (!b) return;
+  apriConferma(`Ripristinare il backup del ${quandoBackup(b)}? I dati attuali verranno sostituiti.`, async () => {
+    let rip = null;
+    try { rip = JSON.parse(b.dati); } catch {}   // un'istantanea rovinata: lo dice la sostituzione
+    await sostituisciDati(rip, "Ripristino non riuscito");
+  });
+}
+
+/* La sostituzione integrale dei dati: la fanno l'import e il ripristino.
+   PRIMA lo stato attuale diventa un'istantanea di sicurezza (sempre,
+   anche a interruttore spento: uno sbaglio deve poter tornare indietro),
+   poi tutto si normalizza e solo se niente è saltato i dati nuovi
+   prendono il posto dei vecchi — o tutto o niente */
+async function sostituisciDati(b, titolo) {
+  try {
+    if (!b || !Array.isArray(b.movimenti) || !Array.isArray(b.categorie)) throw new Error("backup");
+    await backupAuto("sicurezza");
+    // Un id che arriva da fuori vale solo se è un numero intero positivo,
+    // mai ripetuto: tutto il resto diventa null e al salvataggio gliene
+    // viene assegnato uno nuovo (niente roba iniettabile negli onclick)
+    const fabbricaId = () => { const v = new Set(); return x =>
+      (Number.isInteger(x) && x > 0 && !v.has(x) && v.add(x)) ? x : null; };
+    const idCat = fabbricaId(), idConto = fabbricaId(), idBudget = fabbricaId();
+    const rifOk = x => (Number.isInteger(x) && x > 0) ? x : null;   // riferimento in un movimento
+    // Rende il backup compatibile: le sovra-categorie non esistono più.
+    // I nomi diventano stringhe tagliate a 30 (come l'input dell'app): un
+    // backup pasticciato con un nome non-stringa crasherebbe il sort
+    // alfabetico. Il numero d'ordine viaggia col backup: quello scelto da
+    // Daniele non va perso ripartendo dall'alfabeto. L'icona vale solo se
+    // è una dello sprite; le emoji dei backup vecchi si traducono, il
+    // resto diventa il fallback. Il colore anche: slot 1-21, mai due
+    // categorie con lo stesso (le importate senza slot lo ereditano dopo)
+    const slotVisti = new Set();
+    const coloreOk = s => Number.isInteger(s) && s >= 1 && s <= 21 && !slotVisti.has(s) && slotVisti.add(s) ? s : undefined;
+    b.categorie = b.categorie.filter(c => c.livello !== 1)
+      .map(c => ({id: idCat(c.id), nome: String(c.nome ?? "").slice(0, 30),
+                  icona: ICONE.includes(c.icona) ? c.icona : (DA_EMOJI[String(c.emoji)] ?? "etichetta"),
+                  direzione: c.direzione === "entrata" ? "entrata" : "uscita",
+                  colore: coloreOk(c.colore),
+                  ordine: Number.isInteger(c.ordine) && c.ordine > 0 ? c.ordine : undefined}));
+    // Anche i conti arrivano da fuori: nome e icona ripuliti nello stesso modo
+    b.conti = (b.conti || []).map(c => ({id: idConto(c.id), nome: String(c.nome ?? "").slice(0, 30),
+                  icona: ICONE.includes(c.icona) ? c.icona : (DA_EMOJI[String(c.emoji)] ?? "etichetta")}));
+    // Movimenti: solo record riconoscibili, con tipi sicuri (mai fidarsi di un backup pasticciato)
+    b.movimenti = b.movimenti.filter(m => m && (m.tipo === "entrata" || m.tipo === "uscita")
+      && /^\d{4}-\d{2}-\d{2}$/.test(String(m.data))
+      && Number.isFinite(+m.importo) && +m.importo > 0)
+      .map(m => ({tipo: m.tipo, importo: arrotonda(+m.importo), data: String(m.data),
+                  nota: m.nota == null ? null : String(m.nota).slice(0, 80),
+                  conto: rifOk(m.conto), categoria: rifOk(m.categoria)}));
+    // I budget: limite sensato, nome sempre una stringa (i backup vecchi
+    // col catId lo prendono dalla categoria puntata), categorie sempre come
+    // array di id validi, e l'ordine che viaggia
+    b.budget = (b.budget || []).filter(x => x && Number.isFinite(+x.limite) && +x.limite > 0)
+      .map(x => {
+        const cats = (Array.isArray(x.categorie) ? x.categorie
+          : (x.catId != null ? [x.catId] : [])).filter(Number.isInteger);
+        const nome = (Array.isArray(x.categorie)
+          ? String(x.nome ?? "")
+          : String((b.categorie.find(c => c.id === x.catId) || {}).nome ?? "")).slice(0, 30);
+        return {id: idBudget(x.id), limite: arrotonda(+x.limite), nome: nome || "Budget",
+                 categorie: cats,
+                 ordine: Number.isInteger(x.ordine) && x.ordine > 0 ? x.ordine : undefined};
+      });
+    // I periodi chiusi (modalità Libero): solo date ben formate
+    b.periodi = (b.periodi || []).filter(p =>
+      /^\d{4}-\d{2}-\d{2}$/.test(p.inizio) && /^\d{4}-\d{2}-\d{2}$/.test(p.fine) && p.inizio <= p.fine)
+      .map(p => ({inizio: p.inizio, fine: p.fine}));
+    // Tutto si prepara nelle strutture qui sotto: i dati attuali restano
+    // al loro posto finché la sostituzione non è riuscita davvero
+    const nuovo = {movimenti: b.movimenti, categorie: b.categorie, conti: b.conti,
+                   budget: b.budget, periodi: b.periodi};
+    const imp = {...(b.impostazioni && typeof b.impostazioni === "object"
+      ? b.impostazioni : {periodoModalita: "mensile", contoDefault: null})};
+    imp.chiave = "app";
+    imp.contoDefault = rifOk(imp.contoDefault);
+    imp.temaScuro = imp.temaScuro === true;   // solo un booleano vero conta, il resto è rumore
+    imp.backupAuto = imp.backupAuto !== false;   // il backup automatico è acceso salvo disdetta esplicita
+    // I backup delle versioni precedenti passano a Libero e generano i periodi
+    const daLibera = imp.periodoModalita === "mensileLibera";
+    if (daLibera) imp.periodoModalita = "libero";
+    else if (!["settimanale","mensile","libero"].includes(imp.periodoModalita))
+      imp.periodoModalita = "mensile";
+    // Il giorno di reset va usato solo se è davvero un giorno: il resto
+    // è roba iniettabile da un backup pasticciato
+    const gReset = Number.isInteger(imp.resetGiorno) ? imp.resetGiorno : null;
+    delete imp.resetGiorno;           // il giorno di reset non esiste più
+    // In Libero l'aperto si riancora all'ultimo chiuso, o si genera da zero
+    if (imp.periodoModalita === "libero") {
+      if (nuovo.periodi.length) {
+        const ord = [...nuovo.periodi].sort((x, y) => x.inizio.localeCompare(y.inizio));
+        const fine = ord[ord.length - 1].fine;
+        // liberoInizio deve restare una data ISO: una stringa qualsiasi
+        // passata dal backup romperebbe il periodo aperto
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(String(imp.liberoInizio ?? "")) || imp.liberoInizio <= fine)
+          imp.liberoInizio = domaniDi(fine);
+      } else {
+        const gen = generaPeriodiLibero(daLibera, nuovo.movimenti, gReset);
+        nuovo.periodi = gen.chiusi;
+        imp.liberoInizio = gen.inizioAperto;
+      }
+    }
+    // Id freschi per i record senza un id valido: il prossimo record
+    // nuovo dell'app partirà oltre a quelli importati
+    for (const s of ["movimenti", "categorie", "conti", "budget", "periodi"]) {
+      let id = nuovo[s].reduce((m, o) => Math.max(m, o.id || 0), 0) + 1;
+      for (const o of nuovo[s]) if (o.id == null) o.id = id++;
+      dati._id[s] = id;
+    }
+    if (db) {
+      // Sostituzione in un'unica transazione: o entra tutto, o niente
+      await new Promise((ris, err) => {
+        const tx = db.transaction(["movimenti","categorie","conti","budget","periodi","impostazioni"], "readwrite");
+        for (const s of ["movimenti", "categorie", "conti", "budget", "periodi"]) {
+          const o = tx.objectStore(s);
+          o.clear();
+          for (const x of nuovo[s]) o.put(x);
+        }
+        tx.objectStore("impostazioni").put(imp);
+        tx.oncomplete = ris;
+        tx.onerror = () => err(tx.error || new Error("transazione"));
+        tx.onabort = () => err(tx.error || new Error("annullata"));
+      });
+    }
+    // Solo ora che i nuovi dati sono davvero al loro posto, l'app li usa
+    for (const s of ["movimenti", "categorie", "conti", "budget", "periodi"]) dati[s] = nuovo[s];
+    dati.impostazioni = imp;
+    await assegnaOrdine();   // i backup senza numeri d'ordine ereditano quello della lista
+    await assegnaColori();   // e chi è arrivato senza slot colore prende il primo libero
+    // Si torna come da un foglio Impostazioni chiuso: così anche la sua
+    // voce nella cronologia se ne va, e il tasto indietro non resta orfano
+    chiudiModale(); stato.offset = 0; stato.filtro = null; vai(stato.dietro);
+  } catch (e) {
+    // Onesto: se qualcosa salta DOPO la transazione riuscita il database è
+    // già sostituito — ma l'istantanea di sicurezza conserva lo stato di prima
+    apriModale(`<h3>${titolo}</h3>
+      <p class="avviso">O i dati attuali sono rimasti al loro posto, o lo stato di prima resta comunque nell'ultima istantanea di sicurezza. (${e && e.name ? e.name : "errore"})</p>
+      <button class="btn-principale" onclick="chiudiModale()">OK</button>`);
+  }
+}
+
+/* ================================================================
+   13. DATI DI ESEMPIO, CANCELLAZIONE TOTALE, MODALI, AVVIO
+   ================================================================ */
+async function svuotaDati() {
+  for (const s of ["movimenti", "categorie", "conti", "budget", "periodi", "impostazioni"])
+    if (db) await prom(tabella(s, "readwrite").clear());
+  dati.movimenti = []; dati.categorie = []; dati.conti = []; dati.budget = [];
+  dati.periodi = []; dati.impostazioni = null;
+  // Le istantanee sopravvivono allo svuotamento: il loro contatore id continua
+  dati._id = {movimenti: 1, categorie: 1, conti: 1, budget: 1, periodi: 1, backup: dati._id.backup};
+}
+
+function caricaEsempio() {
+  apriConferma("Caricare dati di esempio? I dati attuali verranno sostituiti.", async () => {
+    await backupAuto("sicurezza");   // anche l'esempio sostituisce tutto: lo stato di prima resta recuperabile
+    await svuotaDati();
+    await semina();
+    const oggi = new Date();
+    const trova = nome => dati.categorie.find(c => c.nome === nome).id;
+    const spesa = trova("Spesa"), caffe = trova("Caffè"), fuori = trova("Mangiare fuori"),
+          casa = trova("Affitto"), stipendio = trova("Stipendio");
+    const idConto = nome => dati.conti.find(c => c.nome === nome).id;
+    const contanti = idConto("Contanti"), contoB = idConto("Carta"), satispay = idConto("Satispay");
+    const d = giorni => { const x = new Date(oggi); x.setDate(oggi.getDate() - giorni); return iso(x); };
+    const esempi = [
+      {tipo: "entrata", importo: 2400,    data: d(2), nota: "Stipendio",        conto: contoB,   categoria: stipendio},
+      {tipo: "uscita",  importo: 520,     data: d(2), nota: "Affitto",          conto: contoB,   categoria: casa},
+      {tipo: "uscita",  importo: 45.60,   data: d(0), nota: "Supermercato",     conto: satispay, categoria: spesa},
+      {tipo: "uscita",  importo: 1.30,    data: d(0), nota: "Caffè al bar",     conto: contanti, categoria: caffe},
+      {tipo: "uscita",  importo: 12.50,   data: d(1), nota: "Pizzeria",         conto: contanti, categoria: fuori},
+      {tipo: "uscita",  importo: 32.10,   data: d(1), nota: "Spesa",           conto: satispay, categoria: spesa},
+      {tipo: "uscita",  importo: 8.40,    data: d(3), nota: "Caffè e cornetto", conto: contanti, categoria: caffe},
+      {tipo: "uscita",  importo: 15.90,   data: d(4), nota: "Spesa",            conto: contoB,   categoria: spesa}
+    ];
+    for (const e of esempi) {
+      await dbSalva("movimenti", e); dati.movimenti.push(e);
+    }
+    for (const [nome, cats, limite] of [["Supermercato e caffè", [spesa, caffe], 220], ["Solo caffè", [caffe], 20]]) {
+      const b = {nome, categorie: cats, limite};
+      await dbSalva("budget", b); dati.budget.push(b);
+    }
+    await assegnaOrdine();   // i budget d'esempio nascono SENZA numero d'ordine, ma l'avvio (che lo assegna) è già passato: senza questa riga il menù ⋮ li scambia senza muoverli
+    chiudiModale(); stato.offset = 0; stato.filtro = null; vai(stato.dietro);
+  });
+}
+
+function cancellaTutto() {
+  apriConferma("Cancellare TUTTI i dati? L'operazione è definitiva.", () => {
+    apriConferma("Confermi davvero? Non si può annullare.", async () => {
+      await svuotaDati();
+      // Definitiva davvero: se ne vanno anche le istantanee automatiche
+      for (const vecchia of [...dati.backup]) await dbElimina("backup", vecchia.id);
+      dati.backup = [];
+      await semina();
+      chiudiModale(); stato.offset = 0; stato.filtro = null; vai(stato.dietro);
+    });
+  });
+}
+
+/* ---- Modali generiche ---- */
+function apriModale(html, classe) {
+  // Tasto indietro: una voce per la finestrella, una sola anche se si ridisegna
+  if (!document.getElementById("overlay").className.includes("aperto")) storiaApri();
+  document.getElementById("modale").innerHTML = html;
+  const o = document.getElementById("overlay");
+  o.className = "overlay" + (classe ? " " + classe : "") + " aperto";
+}
+function chiudiModale() {
+  const o = document.getElementById("overlay");
+  if (o.className.includes("aperto")) storiaTogli();
+  o.className = "overlay";
+}
+function eventoOverlay(e) { if (e.target.id === "overlay") chiudiModale(); }
+function apriConferma(testo, azione) {
+  stato._conferma = azione;
+  apriModale(`<h3>Conferma</h3>
+    <p class="avviso" style="font-size:15px;color:var(--testo)">${testo}</p>
+    <div class="azioni-modale" style="margin-top:14px">
+      <button class="btn-secondario" onclick="chiudiModale()">Annulla</button>
+      <button class="btn-principale" onclick="stato._conferma()">OK</button>
+    </div>`);
+}
+
+/* ---- Menù locale dei tre puntini (categorie e budget) ----
+   Pende dal punto toccato come il menù di chiusura del periodo, si
+   chiude col tappeto o col tasto indietro, e lascia una voce nella
+   cronologia come ogni altra schermata che copre.
+   L'ancora la si cerca nel DOM vivo per id, non nell'evento: nell'anteprima
+   l'evento consegnato all'onclick può avere il target staccato dal documento,
+   col rettangolo tutto a zero — e il menù finiva in cima alla pagina */
+function apriMenuLocale(ancoraId, voci) {
+  if (stato._locale) return;
+  const r = document.getElementById(ancoraId).getBoundingClientRect();
+  const largo = 230, alto = voci.length * 48 + 10;
+  const largoSchermo = window.innerWidth ?? 380, altoSchermo = window.innerHeight ?? 720;
+  // A sinistra non oltre il bordo, a destra allineato al bottone: se ci sta,
+  // il menù finisce dove finiscono i puntini
+  const x = Math.max(8, Math.min(r.right - largo, largoSchermo - largo - 8));
+  // Se sotto non c'è spazio, il menù si apre sopra il punto toccato
+  const y = r.bottom + alto + 8 > altoSchermo ? r.top - alto - 8 : r.bottom + 4;
+  stato._locale = {x, y, voci};
+  storiaApri();
+  renderTenendoIlFoglio();
+}
+function chiudiMenuLocale() {
+  if (!stato._locale) return;
+  stato._locale = null;
+  storiaTogli();
+  renderTenendoIlFoglio();
+}
+// La voce del menù: chiude e poi agisce. L'azione parte FUORI dalla consegna
+// del click, come lo swipe: dentro l'evento il render di chiusura cambiava il
+// DOM sotto il dito e su iPhone il riconoscitore dei click restava "spento",
+// con lo spostamento dei budget che non scattava mai
+function voceMenuLocale(i) {
+  const voce = stato._locale && stato._locale.voci[i];
+  if (!voce) return;
+  chiudiMenuLocale();
+  setTimeout(() => voce.azione(), 0);
+}
+// Il render ricostruisce anche il foglio Impostazioni, l'unico scrollabile
+// suo: la lista non deve saltare in cima quando il menù si apre o si chiude
+function renderTenendoIlFoglio() {
+  const foglio = document.querySelector(".sheet");
+  const scrollo = foglio ? foglio.scrollTop : 0;
+  render();
+  const rifatto = document.querySelector(".sheet");
+  if (rifatto) rifatto.scrollTop = scrollo;
+}
+
+/* Numero d'ordine di categorie e budget: è quello che Daniele sposta dai tre
+   puntini in Impostazioni e dal menù del budget. Chi non ce l'ha (dati vecchi
+   o appena seminati) eredita l'ordine che già vedeva — alfabetico per le
+   categorie, quello della lista per i budget — e viene salvato */
+async function assegnaOrdine() {
+  let max = dati.categorie.reduce((m, c) => Math.max(m, c.ordine ?? 0), 0);
+  for (const c of categorieOrdinate()) if (c.ordine == null) { c.ordine = ++max; await dbSalva("categorie", c); }
+  let maxB = dati.budget.reduce((m, b) => Math.max(m, b.ordine ?? 0), 0);
+  for (const b of dati.budget) if (b.ordine == null) { b.ordine = ++maxB; await dbSalva("budget", b); }
+  dati.budget.sort((a, b) => (a.ordine ?? 1e9) - (b.ordine ?? 1e9));   // la pagina segue l'ordine
+}
+
+/* Colore della categoria nella torta: uno slot stabile (1-21), assegnato
+   alla nascita e mai più cambiato. Chi resta senza slot (dati vecchi o
+   importati) eredita il primo libero, nello stesso ordine della lista */
+const slotLibero = () => {
+  const usati = new Set(dati.categorie.map(c => c.colore));
+  for (let s = 1; s <= 21; s++) if (!usati.has(s)) return s;
+  return 1;   // oltre le 21 categorie gli slot ricominciano (non capiterà)
+};
+
+async function assegnaColori() {
+  for (const c of categorieOrdinate())
+    if (!Number.isInteger(c.colore) || c.colore < 1 || c.colore > 21) {
+      c.colore = slotLibero(); await dbSalva("categorie", c);
+    }
+}
+
+/* ---- Migrazione dei dati salvati con versioni precedenti dell'app ---- */
+async function migraDati() {
+  // Una volta esistevano le sovra-categorie (categorie "livello 1"): eliminate
+  for (const c of [...dati.categorie]) {
+    if (c.livello === 1) { await dbElimina("categorie", c.id); dati.categorie = dati.categorie.filter(x => x.id !== c.id); }
+    else if (c.padre != null) { c.padre = null; await dbSalva("categorie", c); }
+  }
+  // Le icone di una volta erano emoji: diventano gli id dello sprite Lucide
+  for (const c of dati.categorie)
+    if (!ICONE.includes(c.icona)) {
+      c.icona = DA_EMOJI[String(c.emoji)] || "etichetta";
+      delete c.emoji;
+      await dbSalva("categorie", c);
+    }
+  for (const c of dati.conti)
+    if (!ICONE.includes(c.icona)) {
+      c.icona = DA_EMOJI[String(c.emoji)] || "etichetta";
+      delete c.emoji;
+      await dbSalva("conti", c);
+    }
+  // I budget vecchi puntavano a una sola categoria (catId)
+  for (const b of [...dati.budget]) {
+    if (b.categorie) continue;
+    const c = b.catId != null ? dati.categorie.find(x => x.id === b.catId) : null;
+    await dbElimina("budget", b.id);
+    dati.budget = dati.budget.filter(x => x.id !== b.id);
+    if (c) {
+      const nb = {id: b.id, nome: c.nome, categorie: [c.id], limite: b.limite};
+      await dbSalva("budget", nb); dati.budget.push(nb);
+    }
+  }
+  // La vecchia modalità "mensile a data libera" (con giorno di reset) diventa Libero
+  let cambiate = false;
+  if (dati.impostazioni?.periodoModalita === "mensileLibera") {
+    dati.impostazioni.periodoModalita = "libero";
+    await attivaLibero(true);   // i cicli si ricostruiscono col giorno di reset
+    delete dati.impostazioni.resetGiorno;
+    cambiate = true;
+  } else if (dati.impostazioni?.periodoModalita === "libero" &&
+             !dati.periodi.length && !dati.impostazioni.liberoInizio) {
+    // Libero attivato in passato ma mai generato (archivio vuoto alla prima volta)
+    await attivaLibero(false);
+    cambiate = true;
+  }
+  if (cambiate) await salvaImpostazioni();
+  await assegnaOrdine();    // i dati vecchi prendono il numero d'ordine spostabile
+  await assegnaColori();    // e il colore stabile della torta
+}
+
+/* ---- Tasto indietro del telefono ----
+   Ogni schermata che copre le sezioni base (foglio del movimento, foglio
+   Impostazioni, pagina Modifica periodi, menù a tendina, finestrella/modale,
+   filtro di categoria o conto) lascia una voce nella cronologia del browser:
+   il tasto indietro chiude la schermata aperta. Anche Analisi e Budget
+   lasciano la loro voce (voceSezione): il tasto indietro riporta prima a
+   Movimenti e da lì, col secondo colpo, esce dall'app. */
+const PAGINE_SCHERMO = ["form", "impostazioni", "periodi"];
+let pilaStoria = 0;          // voci messe nella cronologia e non ancora tolte
+let storiaAspetta = false;   // in volo il popstate di una chiusura già fatta da noi
+let spingeInAttesa = false;  // schermata aperta mentre quel popstate era in volo
+let daIndietro = false;      // chiusura comandata dal tasto indietro: niente history.back
+let voceSezione = false;     // la voce messa entrando in Analisi o Budget
+
+function storiaApri() {
+  // Se è in volo il back di una chiusura fatta un attimo prima (chiusa una
+  // schermata e subito aperta un'altra nello stesso tocco, come menù →
+  // calendario), la voce si mette quando quel back è arrivato: altrimenti
+  // se la mangerebbe lui
+  if (storiaAspetta) { spingeInAttesa = true; return; }
+  pilaStoria++;
+  try { history.pushState({schermata: true}, ""); } catch { pilaStoria--; }
+}
+function storiaTogli() {
+  if (daIndietro || pilaStoria === 0) {
+    // C'è una voce rimandata che non è mai partita e si sta chiudendo la
+    // schermata che l'aveva chiesta: la voce si annulla e basta
+    if (spingeInAttesa && pilaStoria === 0 && !daIndietro) spingeInAttesa = false;
+    return;
+  }
+  pilaStoria--; storiaAspetta = true;
+  try { history.back(); } catch {}
+}
+
+// Quale schermata è aperta, dalla più alta in cima
+function chiudeSchermata() {
+  if (document.getElementById("overlay").className.includes("aperto")) return chiudiModale;
+  if (stato._locale) return chiudiMenuLocale;
+  if (stato._menu) return chiudiMenu;
+  if (stato.pagina === "form") return chiudiForm;
+  if (stato.pagina === "impostazioni") return chiudiImpostazioni;
+  if (stato.pagina === "periodi") return () => vai("impostazioni");
+  if (stato.filtro?.tipo === "budget") return chiudiBudgetDettaglio;
+  if (stato.filtro && stato.pagina === "movimenti") return togliFiltro;
+  // Sezione Analisi o Budget: il tasto indietro riporta a Movimenti
+  if (PAGINE.includes(stato.pagina) && stato.pagina !== "movimenti") {
+    voceSezione = false;
+    return () => vai("movimenti");
+  }
+  return null;
+}
+
+window.addEventListener("popstate", () => {
+  if (storiaAspetta) {   // chiusa da noi con tasto, swipe o cambio pagina: la voce era già tolta
+    storiaAspetta = false;
+    if (spingeInAttesa) { spingeInAttesa = false; storiaApri(); }
+    return;
+  }
+  // Tasto indietro: chiudi la schermata aperta, senza toccare la cronologia
+  daIndietro = true;
+  if (pilaStoria > 0) pilaStoria--;
+  const chiudi = chiudeSchermata();
+  if (chiudi) chiudi();
+  daIndietro = false;
+});
+
+/* ---- Avvio ---- */
+(async function avvio() {
+  try { db = await apriDB(); } catch { db = null; }
+  if (!db) bannerMemoria();   // rarissimo, ma meglio saperlo subito
+  await caricaTutto();
+  await migraDati();
+  await semina();
+  await backupAuto("periodo");   // il primo avvio dentro un periodo nuovo ne fotografa l'inizio (una sola per periodo)
+  if (navigator.storage?.persist) { try { await navigator.storage.persist(); } catch {} }
+  applicaTema();
+  // Il sistema può cambiare idea mentre l'app è aperta: lo si segue, salvo forzatura
+  if (window.matchMedia) window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applicaTema);
+  render();
+  attivaSwipePeriodi();   // una volta sola: copre tutto lo schermo
+  /* Il service worker porta l'app offline quando è pubblicata su un sito
+     (https): in anteprima o da file locale non serve e non si registra */
+  try {
+    if (typeof location === "object" && location && location.protocol === "https:" && navigator.serviceWorker)
+      navigator.serviceWorker.register("sw.js");
+  } catch (e) {}
+})();
+</script>
+</body>
+</html>
