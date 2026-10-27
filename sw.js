@@ -1,24 +1,4 @@
-/* Service worker di «Cunto de li Cunti» — sta accanto a index.html.
-   L'app vive in un file solo: la cache porta offline la pagina e il manifest.
-   Strategia: prima la rete (così gli aggiornamenti arrivano sempre freschi),
-   la cache è il salvagente quando il telefono non ha segnale.
-   A ogni modifica dell'app alza la versione qui sotto: alla prossima
-   apertura i telefoni si aggiornano da soli e le cache vecchie
-   vengono buttate via da sole.
-   v2 (26 ott 2026): niente fili tra i budget, niente linea spessa in Analisi,
-   niente filo sopra i gruppi giorno, «Imposta budget» senza cornice,
-   CSP con img-src 'self' data:
-   v3 (27 ott 2026): giro di revisione del codice — etichette colorate e
-   pallino nel grafico flusso, date impossibili filtrate all'import,
-   avvio blindato contro l'archivio corrotto
-   v4 (27 ott 2026): nel grafico flusso le tacche dei giorni con uscite
-   e gli importi sui 4 picchi di spesa; le righe della sintesi per
-   giorno filtrano i movimenti di quel giorno; tratto sottile con
-   uno snodo su ogni giorno con movimento
-   v5 (27 ott 2026): il movimento nuovo entra con l'animazione che
-   spinge giù la lista, la torta di Analisi respira a spicchi col
-   filo d'aria tra le fette */
-const NOME = "cunto-v5";
+const NOME = "cunto-v8";
 const FILE = ["./", "./manifest.webmanifest", "icona-192.png", "icona-512.png",
               "icona-512-mascherabile.png", "apple-touch-icon.png"];
 
