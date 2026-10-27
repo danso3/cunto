@@ -6,9 +6,13 @@
 <meta name="theme-color" id="metaTema" content="#f8fafc">
 <!-- La CSP vieta qualunque risorsa esterna: l'app non può comunicare in rete
      anche per errore. Per la pubblicazione si aprono soltanto manifest e
-     service worker, che restano nella stessa origine del sito -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob:; manifest-src 'self'; worker-src 'self'">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232b5f9e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1'/><path d='M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4'/></svg>">
+     service worker, che restano nella stessa origine del sito. img-src deve
+     contenere 'self': Chrome scarica le icone del manifest seguendo proprio
+     questa direttiva, e senza 'self' rifiuta l'installazione (scoperto sul
+     deploy vero da Daniele, 26 ott 2026). data: copre il favicon -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; manifest-src 'self'; worker-src 'self'">
+<!-- Favicon: il disegno di Daniele — il registro con la moneta €, come l'icona dell'app -->
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect x='0' y='0' width='512' height='512' fill='%232b5f9e'/><rect x='152' y='152' width='204' height='236' rx='20' fill='none' stroke='%23ffffff' stroke-width='14'/><line x1='192' y1='159' x2='192' y2='381' stroke='%23ffffff' stroke-width='14' stroke-linecap='round'/><line x1='216' y1='214' x2='320' y2='214' stroke='%23ffffff' stroke-width='12' stroke-linecap='round'/><line x1='216' y1='262' x2='320' y2='262' stroke='%23ffffff' stroke-width='12' stroke-linecap='round'/><line x1='216' y1='310' x2='320' y2='310' stroke='%23ffffff' stroke-width='12' stroke-linecap='round'/><line x1='216' y1='358' x2='276' y2='358' stroke='%23ffffff' stroke-width='12' stroke-linecap='round'/><circle cx='352' cy='176' r='58' fill='%230f141a' stroke='%23ffffff' stroke-width='13'/><line x1='352' y1='148' x2='352' y2='204' stroke='%23ffffff' stroke-width='10' stroke-linecap='round'/><line x1='343' y1='157' x2='361' y2='157' stroke='%23ffffff' stroke-width='9' stroke-linecap='round'/><line x1='343' y1='185' x2='361' y2='185' stroke='%23ffffff' stroke-width='9' stroke-linecap='round'/></svg>">
 <!-- Il pacchetto PWA: dichiarato quando l'app è pubblicata su un sito.
      In anteprima o da file locale i file non ci sono e non succede nulla -->
 <link rel="manifest" href="manifest.webmanifest">
@@ -28,7 +32,6 @@
     --bordo: light-dark(#e2e8f0, #243140); --sfondo: light-dark(#f8fafc, #0f141a);
     --carta: light-dark(#fff, #151e28); --accento: light-dark(#2b5f9e, #6aa5e0);
     --testo: light-dark(#1e293b, #dfe8f1); --tenue: light-dark(#eaf1f9, #1c2b3a);
-    --linea-giorno: light-dark(#cbd5e1, #33475c);
     /* Slot colore delle categorie nella torta: uno per riga, assegnato alla
        nascita di ogni categoria e mai più cambiato, così i colori restano
        riconoscibili da un periodo all'altro. La tinta avanza dell'angolo
@@ -79,8 +82,11 @@
      zoom a doppio tap, che qui non serve.
      overflow-x: clip — il contenuto che entra da destra sfora di 46px per un attimo:
      senza il clip la pagina diventerebbe scrollabile di lato e la fascia fissa in
-     basso (fascia 4) sparirebbe e riapparirebbe a ogni entrata da destra */
-  #app { max-width: 480px; margin: 0 auto; min-height: 100vh; padding-bottom: 88px;
+     basso (fascia 4) sparirebbe e riapparirebbe a ogni entrata da destra.
+     padding-bottom: la barra fissa è alta 56px (44px di pulsanti + 12px d'aria)
+     più la zona sicura del telefono; sopra ci lascio 14px di respiro */
+  #app { max-width: 480px; margin: 0 auto; min-height: 100vh;
+         padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px));
          touch-action: manipulation; overflow-x: clip; }
   /* Foglio "nuovo movimento": sale dal basso sopra la pagina precedente */
   .sheet {
@@ -189,20 +195,16 @@
   .corpo { padding: 4px 12px 12px; }
   .giorno {
     font-size: 12px; font-weight: 700; color: var(--neutro);
-    text-transform: uppercase; letter-spacing: .5px; margin: 20px 2px 6px; padding-top: 10px;
-    border-top: 2px solid var(--linea-giorno);
+    text-transform: uppercase; letter-spacing: .5px; margin: 20px 2px 6px;
   }
-  /* Il primo gruppo del giorno non ha il filo sopra: la pagina comincia qui */
-  .corpo .giorno:first-child { border-top: none; padding-top: 0; }
+  /* Niente fili sopra i gruppi giorno né tra i movimenti (richiesta di
+     Daniele, 26 ott 2026): a staccarli bastano l'etichetta e l'aria */
   .mov {
     display: flex; align-items: center; gap: 10px;
-    padding: 13px 2px; border-bottom: 1px solid var(--bordo);
+    padding: 13px 2px;
     transition: background .1s;
   }
   .mov:active { background: color-mix(in srgb, currentColor 8%, transparent); }
-  /* L'ultimo movimento del giorno non porta il filo sotto: il confine lo fa
-     già il separatore del giorno dopo, la linea non si raddoppia */
-  .mov:has(+ .giorno) { border-bottom: none; }
   .mov .icona-mov { width: 30px; flex: none; }
   .mov .info { flex: 1; min-width: 0; }
   .mov .titolo { font-weight: 600; font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -343,9 +345,35 @@
   /* Barra e percentuale sulla stessa riga: la barra si accorcia per far posto al numero */
   .riga-barra { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
   .riga-barra .barra { flex: 1; margin-top: 0; }
-  .riga-conto { padding: 12px 2px; border-bottom: 1px solid var(--bordo); min-height: 44px; cursor: pointer; }
-  /* Separatore puramente visivo tra categorie e conti */
-  .separatore { height: 2px; background: var(--linea-giorno); margin: 20px 0; }
+  .riga-conto { padding: 12px 2px; min-height: 44px; cursor: pointer; }
+  /* Niente linea spessa tra categorie e conti né fili tra i conti
+     (richiesta di Daniele, 26–27 ott 2026): resta solo un po' d'aria */
+  .riga-cat + .riga-conto { margin-top: 20px; }
+  /* Selettore delle due pagine di Analisi: sta in cima al corpo, non nella
+     fascia fissa — se si scorre, scorre via con la pagina (richiesta di Daniele) */
+  .schede-analisi { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 2px 2px 16px; }
+  .schede-analisi button {
+    padding: 10px 6px; min-height: 44px; border: none; border-radius: 999px;
+    background: none; color: var(--neutro); font-weight: 700; font-size: 14px;
+    transition: background .1s;
+  }
+  .schede-analisi button.sel { background: var(--tenue); color: var(--accento); }
+  /* Grafico di flusso: solo le due linee, niente assi né griglia */
+  .grafico-flusso { display: block; width: 100%; }
+  .grafico-flusso text { fill: var(--neutro); font-size: 9px; font-weight: 600; }
+  .grafico-flusso polyline { fill: none; stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+  /* I due pulsanti sotto il grafico: la lingua del selettore entrate/uscite
+     del form, più compatti ma alti 44px come ogni cosa da toccare */
+  .pulsanti-flusso { display: flex; gap: 8px; justify-content: center; padding: 12px 0 18px; }
+  .pulsanti-flusso button {
+    padding: 10px 18px; min-height: 44px; border: none; border-radius: 999px;
+    background: none; color: var(--neutro); font-weight: 700; font-size: 13.5px;
+    transition: background .1s;
+  }
+  .pulsanti-flusso button.entrata.sel { background: color-mix(in srgb, var(--verde) 10%, transparent); color: var(--verde); }
+  .pulsanti-flusso button.uscita.sel { background: color-mix(in srgb, var(--rosso) 10%, transparent); color: var(--rosso); }
+  /* Le righe dei giorni della sintesi del flusso non si toccano */
+  .riga-statica { cursor: default; }
   .banner-filtro {
     display: flex; align-items: center; justify-content: space-between; gap: 8px;
     background: var(--tenue); border-radius: 999px;
@@ -355,9 +383,10 @@
   .banner-filtro button { background: none; border: none; color: var(--accento); font-size: 18px; padding: 12px 16px; }
 
   /* ============ Budget ============ */
-  .riga-budget { padding: 14px 2px; border-bottom: 1px solid var(--bordo); }
-  /* L'ultimo budget non porta il filo sotto: sotto c'è già il bordo del pulsante */
-  .riga-budget:has(+ .btn-secondario) { border-bottom: none; }
+  /* Niente fili tra un budget e l'altro (richiesta di Daniele, 26 ott 2026):
+     le schede si distinguono da sole, e non serve più nemmeno il caso
+     speciale dell'ultima prima del pulsante */
+  .riga-budget { padding: 14px 2px; }
   .riga-budget .testa { display: flex; align-items: center; gap: 8px; }
   .riga-budget .testa .nome { font-weight: 700; font-size: 15px; flex: 1; }
   .riga-budget .testa .tre-punti { background: none; border: none; font-size: 22px; color: var(--neutro); padding: 8px 12px; }
@@ -389,6 +418,9 @@
     background: none; color: var(--accento); font-size: 15px; font-weight: 700; margin-top: 14px;
     display: flex; align-items: center; justify-content: center; gap: 8px;
   }
+  /* «+ Imposta budget» senza cornice (prova di Daniele, 26 ott 2026): il
+     tocco resta comodo, il pulsante si riconosce dall'accento */
+  .senza-bordo { border: none; }
 
   /* ============ Impostazioni ============ */
   /* Foglio piatto: gruppi con titolo maiuscolo, niente scatole */
@@ -758,6 +790,13 @@ const arrotonda = n => Math.round(n * 100) / 100;
 const esc = s => String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
                               .replace(/"/g,"&quot;").replace(/'/g,"&#39;").replace(/`/g,"&#96;");
 
+// Data ISO che esiste davvero nel calendario: la sola regex lascerebbe
+// passare i giorni impossibili (31 febbraio, mese 13), che nei render
+// farebbero nascere "undefined NaN" e crash — entrano solo da un backup
+// pasticciato, perché all'utente le date arrivano dal calendario.
+// Attenzione: new Date arrotola "2026-02-31" al 3 marzo invece di dare
+// NaN, quindi serve il giro di ritorno (parse UTC → riconfronto)
+const dataOk = s => /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(new Date(s)) && new Date(s).toISOString().slice(0, 10) === s;
 // Ricerca di categoria o conto per id
 const cat = id => dati.categorie.find(c => c.id === id) || null;
 const conto = id => dati.conti.find(c => c.id === id) || null;
@@ -1027,6 +1066,7 @@ function generaPeriodiLibero(daMensileLibera, movimenti, g) {
    5. RENDERING COMUNE
    ================================================================ */
 const stato = {pagina: "movimenti", offset: 0, modifica: null,
+               analisiScheda: "categorie",   // la seconda pagina di Analisi ("flusso") non si ricorda: si parte sempre da Categorie
                importoStr: "", direzione: "uscita", contoSel: null,
                categoria: null, _data: null, _nota: "", filtro: null, dietro: "movimenti",
                _cal: null, _menu: false, _dir: null, _per: null, _locale: null};
@@ -1265,7 +1305,7 @@ function rigaMovimento(m) {
    7. PAGINA ANALISI (solo uscite)
    Torta statica con legenda affiancata + lista categorie con barre.
    ================================================================ */
-function renderAnalisi() {
+function corpoCategorie() {
   const ms = movimentiNelPeriodo().filter(m => m.tipo === "uscita");
 
   // Aggregazione per categoria
@@ -1287,7 +1327,7 @@ function renderAnalisi() {
   else {
     const C = 2 * Math.PI * 60;   // grafico a torta: anelli SVG
     let acc = 0, segmenti = "", legenda = "", barre = "";
-    voci.forEach((v, i) => {
+    voci.forEach(v => {
       v.perc = totale ? v.totale / totale * 100 : 0;
       // Il colore è lo slot assegnato alla categoria (neutro chi non ce l'ha):
       // var() va nello style, negli attributi di presentazione non funziona
@@ -1310,8 +1350,7 @@ function renderAnalisi() {
       id: co.id, ico: icona(co.icona), nome: co.nome,
       totale: arrotonda(ms.filter(m => m.conto === co.id).reduce((s, m) => s + m.importo, 0))
     })).filter(x => x.totale > 0).sort((a, b) => b.totale - a.totale);
-    if (perConto.length) barre += `<div class="separatore"></div>` +
-      perConto.map(v => `<div class="riga-conto" onclick="filtraPer('conto','${v.id}')">
+    if (perConto.length) barre += perConto.map(v => `<div class="riga-conto" onclick="filtraPer('conto','${v.id}')">
         <div class="testa"><span>${v.ico} ${esc(v.nome)}</span><span>${eur(v.totale)}</span></div>
       </div>`).join("");
     corpo = `<div class="torta">
@@ -1320,7 +1359,136 @@ function renderAnalisi() {
       </div>${barre}`;
   }
 
+  return corpo;
+}
+
+/* ---- Analisi: le due pagine (Categorie e Flusso giornaliero) ----
+   Il selettore sta in cima al corpo, sotto la fascia fissa: scorre con
+   la pagina. La pagina aperta non si ricorda: si riparte da Categorie. */
+function renderAnalisi() {
+  const corpo = selettoreAnalisi()
+    + (stato.analisiScheda === "flusso" ? corpoFlusso() : corpoCategorie());
   return {kpi: kpiHtml(movimentiNelPeriodo()), corpo: `<div class="corpo">${corpo}</div>`};
+}
+
+const selettoreAnalisi = () => `<div class="schede-analisi">
+  <button class="${stato.analisiScheda === "flusso" ? "" : "sel"}" onclick="vaiSchedaAnalisi('categorie')">Categorie</button>
+  <button class="${stato.analisiScheda === "flusso" ? "sel" : ""}" onclick="vaiSchedaAnalisi('flusso')">Flusso giornaliero</button>
+</div>`;
+
+function vaiSchedaAnalisi(s) {
+  if (stato.analisiScheda === s) return;
+  stato.analisiScheda = s;
+  render();
+}
+
+/* ---- La pagina del flusso ----
+   Quali linee sono nascoste si ricorda da una seduta all'altra: sta
+   nelle impostazioni, come il tema scuro, e viaggia col backup. */
+const lineaNascosta = q => dati.impostazioni.flusso?.["nascondi" + cap(q)] === true;
+
+function toggleLinea(q) {
+  const f = dati.impostazioni.flusso ?? (dati.impostazioni.flusso = {});
+  f["nascondi" + cap(q)] = !lineaNascosta(q);
+  salvaImpostazioni();
+  render();
+}
+
+function corpoFlusso() {
+  const p = periodo(), ms = movimentiNelPeriodo();
+  const mostraE = !lineaNascosta("entrate"), mostraU = !lineaNascosta("uscite");
+
+  if (!ms.length) return `<div class="vuoto">Nessun movimento in questo periodo.</div>`;
+
+  /* I giorni dell'asse: tutti quelli del periodo, anche quelli senza
+     movimenti. I periodi senza fine (le spese programmate) si riducono
+     ai soli giorni che hanno movimenti, l'asse infinito non si disegna */
+  const giorni = [];
+  if ((p.a - p.da) / 864e5 > 92) {
+    for (const m of ms) if (!giorni.includes(m.data)) giorni.push(m.data);
+    giorni.sort();
+  } else for (let d = new Date(p.da); d <= p.a; d.setDate(d.getDate() + 1)) giorni.push(iso(d));
+  if (!giorni.length) return `<div class="vuoto">Nessun movimento in questo periodo.</div>`;
+
+  // I totali di ogni giorno, con le etichette dei gruppi di Movimenti
+  const perGiorno = new Map();
+  for (const g of giorni) perGiorno.set(g, {entrata: 0, uscita: 0});
+  for (const m of ms) { const g = perGiorno.get(m.data); if (g) g[m.tipo] += m.importo; }
+
+  // La scala segue le linee visibili: nascosta una, l'altra respira
+  const maxVal = giorni.reduce((m, g) => {
+    const t = perGiorno.get(g);
+    return Math.max(m, mostraE ? t.entrata : 0, mostraU ? t.uscita : 0);
+  }, 0);
+
+  /* Il grafico: una polylinea per linea, nient'altro. L'etichetta del
+     massimo sta in alto a sinistra; sotto i picchi il numero del giorno,
+     colorato come la sua linea (se coincidono, si scartano di 14) */
+  let grafico = `<div class="vuoto">Tutte e due le linee sono nascoste.</div>`;
+  if (mostraE || mostraU) {
+    const L = 8, S = 20, F = 14, W = 320, H = 168;   // lati, sopra, fondo, lato, altezza
+    const n = giorni.length;
+    const passo = n > 1 ? (W - 2 * L) / (n - 1) : 0;
+    const x = i => L + i * passo;
+    const y = v => maxVal > 0 ? H - F - (v / maxVal) * (H - S - F) : H - F;
+    const punti = tipo => giorni.map((g, i) =>
+      x(i).toFixed(1) + "," + y(perGiorno.get(g)[tipo]).toFixed(1)).join(" ");
+    // Periodo aperto di un giorno solo (Libero chiuso ieri): una polylinea
+    // di un punto non si disegna, restano i pallini a segnarlo
+    const pallino = (tipo, col) => n === 1
+      ? `<circle cx="${x(0).toFixed(1)}" cy="${y(perGiorno.get(giorni[0])[tipo]).toFixed(1)}" r="3" style="fill:${col}"/>` : "";
+    const picco = tipo => {
+      let mi = 0, mv = -1;
+      giorni.forEach((g, i) => { const v = perGiorno.get(g)[tipo]; if (v > mv) { mv = v; mi = i; } });
+      return mv > 0 ? {x: x(mi), testo: String(Number(giorni[mi].slice(8)))} : null;
+    };
+    const etichette = [];
+    const pe = mostraE ? picco("entrata") : null, pu = mostraU ? picco("uscita") : null;
+    // lo style e non l'attributo fill: il CSS del grafico scrive fill:neutro
+    // sui text, e un attributo di presentazione perderebbe sempre contro di lui
+    if (pe) etichette.push(`<text x="${pe.x.toFixed(1)}" y="${H - 3}" style="fill:var(--verde)">${pe.testo}</text>`);
+    if (pu) etichette.push(`<text x="${Math.max(pu.x, (pe?.x ?? -99) + 14).toFixed(1)}" y="${H - 3}" style="fill:var(--rosso)">${pu.testo}</text>`);
+    grafico = `<svg class="grafico-flusso" viewBox="0 0 ${W} ${H}">
+      <text x="0" y="10">${eur(maxVal)}</text>
+      ${mostraE ? `<polyline points="${punti("entrata")}" style="stroke:var(--verde)"/>` : ""}
+      ${mostraU ? `<polyline points="${punti("uscita")}" style="stroke:var(--rosso)"/>` : ""}
+      ${pallino("entrata", "var(--verde)")}${pallino("uscita", "var(--rosso)")}
+      ${etichette.join("")}
+    </svg>`;
+  }
+
+  // I due pulsanti: acceso = la linea si vede
+  const pulsanti = `<div class="pulsanti-flusso">
+    <button class="entrata${mostraE ? " sel" : ""}" onclick="toggleLinea('entrate')">Entrate</button>
+    <button class="uscita${mostraU ? " sel" : ""}" onclick="toggleLinea('uscite')">Uscite</button>
+  </div>`;
+
+  /* La sintesi per giorno: classifica delle uscite dal giorno più vorace;
+     i giorni a zero si riuniscono in una sola riga in fondo (richiesta di
+     Daniele) — le righe non si toccano, non c'è niente da aprire */
+  const conUscite = giorni.filter(g => perGiorno.get(g).uscita > 0)
+    .sort((a, b) => perGiorno.get(b).uscita - perGiorno.get(a).uscita);
+  const totUscite = conUscite.reduce((s, g) => s + perGiorno.get(g).uscita, 0);
+  const oggiI = iso(new Date()), ieriI = ieriIso();
+  const etichGiorno = g => g === oggiI ? "Oggi" : g === ieriI ? "Ieri"
+    : cap(GIORNI[new Date(g + "T12:00:00").getDay()]) + " "
+      + new Date(g + "T12:00:00").getDate() + " " + MESI[new Date(g + "T12:00:00").getMonth()];
+  let sintesi = "";
+  for (const g of conUscite) {
+    const tot = arrotonda(perGiorno.get(g).uscita);
+    const perc = totUscite ? tot / totUscite * 100 : 0;
+    sintesi += `<div class="riga-cat riga-statica">
+      <div class="testa"><span>${etichGiorno(g)}</span><span>${eur(tot)}</span></div>
+      <div class="riga-barra"><div class="barra"><div class="riempimento" style="width:${perc}%;background:var(--rosso)"></div></div>
+        <span class="perc">${perc.toFixed(1).replace(".", ",")}%</span></div>
+    </div>`;
+  }
+  const zero = giorni.length - conUscite.length;
+  if (zero > 0) sintesi += `<div class="riga-cat riga-statica"><div class="testa">
+    <span class="neutro">${zero} giorn${zero === 1 ? "o" : "i"} senza uscite</span>
+    <span class="neutro">${eur(0)}</span></div></div>`;
+
+  return grafico + pulsanti + sintesi;
 }
 
 /* ================================================================
@@ -1421,7 +1589,7 @@ function renderBudget() {
   if (!dati.budget.length) righe = `<div class="vuoto">Nessun budget impostato.</div>`;
 
   return {kpi: kpiHtml(null), corpo: `<div class="corpo">${righe}
-    <button class="btn-secondario" onclick="apriBudgetModale(null)">${icona("piu")} Imposta budget</button></div>`};
+    <button class="btn-secondario senza-bordo" onclick="apriBudgetModale(null)">${icona("piu")} Imposta budget</button></div>`};
 }
 
 function apriBudgetModale(id) {
@@ -2504,7 +2672,7 @@ async function sostituisciDati(b, titolo) {
                   icona: ICONE.includes(c.icona) ? c.icona : (DA_EMOJI[String(c.emoji)] ?? "etichetta")}));
     // Movimenti: solo record riconoscibili, con tipi sicuri (mai fidarsi di un backup pasticciato)
     b.movimenti = b.movimenti.filter(m => m && (m.tipo === "entrata" || m.tipo === "uscita")
-      && /^\d{4}-\d{2}-\d{2}$/.test(String(m.data))
+      && dataOk(String(m.data))
       && Number.isFinite(+m.importo) && +m.importo > 0)
       .map(m => ({tipo: m.tipo, importo: arrotonda(+m.importo), data: String(m.data),
                   nota: m.nota == null ? null : String(m.nota).slice(0, 80),
@@ -2525,7 +2693,7 @@ async function sostituisciDati(b, titolo) {
       });
     // I periodi chiusi (modalità Libero): solo date ben formate
     b.periodi = (b.periodi || []).filter(p =>
-      /^\d{4}-\d{2}-\d{2}$/.test(p.inizio) && /^\d{4}-\d{2}-\d{2}$/.test(p.fine) && p.inizio <= p.fine)
+      dataOk(p.inizio) && dataOk(p.fine) && p.inizio <= p.fine)
       .map(p => ({inizio: p.inizio, fine: p.fine}));
     // Tutto si prepara nelle strutture qui sotto: i dati attuali restano
     // al loro posto finché la sostituzione non è riuscita davvero
@@ -2537,6 +2705,9 @@ async function sostituisciDati(b, titolo) {
     imp.contoDefault = rifOk(imp.contoDefault);
     imp.temaScuro = imp.temaScuro === true;   // solo un booleano vero conta, il resto è rumore
     imp.backupAuto = imp.backupAuto !== false;   // il backup automatico è acceso salvo disdetta esplicita
+    // Le linee nascoste del flusso: solo booleani, il resto è rumore iniettabile
+    imp.flusso = {nascondiEntrate: imp.flusso?.nascondiEntrate === true,
+                  nascondiUscite: imp.flusso?.nascondiUscite === true};
     // I backup delle versioni precedenti passano a Libero e generano i periodi
     const daLibera = imp.periodoModalita === "mensileLibera";
     if (daLibera) imp.periodoModalita = "libero";
@@ -2877,7 +3048,9 @@ window.addEventListener("popstate", () => {
 (async function avvio() {
   try { db = await apriDB(); } catch { db = null; }
   if (!db) bannerMemoria();   // rarissimo, ma meglio saperlo subito
-  await caricaTutto();
+  // Un archivio che si apre ma non si lascia leggere (corrotto) non deve
+  // fermare l'app su schermo vuoto: si lavora in memoria, col banner a dirlo
+  try { await caricaTutto(); } catch { db = null; bannerMemoria(); }
   await migraDati();
   await semina();
   await backupAuto("periodo");   // il primo avvio dentro un periodo nuovo ne fotografa l'inizio (una sola per periodo)
