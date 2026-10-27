@@ -1447,11 +1447,15 @@ function corpoFlusso() {
   for (const g of giorni) perGiorno.set(g, {entrata: 0, uscita: 0});
   for (const m of ms) { const g = perGiorno.get(m.data); if (g) g[m.tipo] += m.importo; }
 
-  // La scala segue le linee visibili: nascosta una, l'altra respira
-  const maxVal = giorni.reduce((m, g) => {
+  // La scala segue le linee visibili: nascosta una, l'altra respira.
+  // Ma ha un pavimento: non scende mai sotto i 200 € — nei periodi
+  // poveri i piccoli restano piccoli, non si gonfiano fino al cielo
+  // (regola di Daniele, 27 ott: le y si scalano sugli importi, da 200 in su)
+  let maxVal = giorni.reduce((m, g) => {
     const t = perGiorno.get(g);
     return Math.max(m, mostraE ? t.entrata : 0, mostraU ? t.uscita : 0);
   }, 0);
+  if (maxVal > 0 && maxVal < 200) maxVal = 200;   // il pavimento: senza movimenti la scala resta a zero
 
   /* Il grafico: un tratto sottile per linea, con uno snodo (puntino
      più spesso del filo) su ogni giorno che ha avuto movimento — la
@@ -1461,8 +1465,11 @@ function corpoFlusso() {
      salta uno. Sopra i quattro picchi di spesa più alti l'importo in
      rosso: se due etichette si pesterebbero i piedi, resta quella con
      l'importo più alto e le altre si nascondono; se è una linea del
-     grafico a passarle sopra, prima si sposta un filo (mai lontana
-     dal suo picco) e solo se non c'è posto si nasconde pure lei.
+     grafico a passarle sopra, prima si sposta un filo — di lato mai
+     oltre la mezza distanza tra i giorni, salvo due scuse oneste: il
+     picco che domina i vicini porta l'etichetta alta sopra le loro
+     teste, e il bordo del disegno può spingerla nella striscia dove
+     nessun punto abita; senza posto né scuse si nasconde pure lei.
      L'importo del massimo in alto a sinistra resta solo quando nessun
      picco porta il suo (le uscite nascoste, per dire, non lascerebbero
      leggere nessuna scala) */
@@ -1546,6 +1553,15 @@ function corpoFlusso() {
       // prima dov'è, poi su/giù di poco, poi di lato, poi entrambi — mai
       // oltre 18 di quota e 28 di lato: deve restare del suo picco
       const PROVE = [[0, 0]];
+      // ...ma di lato c'è un limite: mai oltre la mezza distanza tra i
+      // giorni — oltre, l'etichetta parrebbe di un altro punto. Due
+      // scuse oneste però le permettono di uscire (regola di Daniele,
+      // 27 ott): o vola alta sopra la testa di ogni snodo che tocca —
+      // il picco che domina i vicini si capisce anche spostata — o a
+      // spingerla è stato solo il bordo del disegno, nella striscia
+      // dove non abita nessun punto. L'83,49 dell'1 del mese, bassa
+      // come il vicino del 3, non ha scuse: meglio nascosta che ambigua
+      const confine = passo > 0 ? passo / 2 : 1e9;   // periodo di un giorno solo: il punto è quello, confine inesistente
       for (const [dv, dl] of [[6,0],[0,10],[6,10],[12,0],[0,20],[12,10],
                               [6,20],[12,20],[18,0],[0,28],[18,20],[12,28],[18,28]])
         for (const sv of (dv ? [1, -1] : [1]))
@@ -1564,6 +1580,24 @@ function corpoFlusso() {
           const c2 = Math.min(Math.max(cx0 + dl, L + m), W - L - m);
           const q = base + dv;
           if (q < 13 || q > 150) continue;   // mai sopra il cielo né giù nell'asse
+          // oltre il confine servono le scuse: il cielo o il bordo
+          if (Math.abs(c2 - x(p.i)) > confine) {
+            const teste = [];   // le teste degli snodi che finiscono sotto la sua ala
+            giorni.forEach((g, j) => {
+              if (j === p.i) return;
+              const tg = perGiorno.get(g);
+              if ((tg.uscita > 0 || (mostraE && tg.entrata > 0)) && x(j) >= c2 - m && x(j) <= c2 + m)
+                teste.push(y(Math.max(tg.uscita, mostraE ? tg.entrata : 0)));
+            });
+            // il cielo: la casa naturale vola almeno 18px sopra ogni testa toccata
+            // (troppo in alto per sembrare loro) e il candidato non scende sotto
+            // casa sua — la prominenza non si fabbrica scendendo di quota
+            const cielo = teste.length > 0 && base <= Math.min(...teste) - 18 && q <= base;
+            // il bordo: ha spinto solo il disegno (la casa era già dentro i
+            // margini) e sotto l'ala non c'è proprio nessuno
+            const bordo = Math.abs(c2 - cx0) <= confine && !teste.length;
+            if (!cielo && !bordo) continue;   // senza scuse: troppo lontana dal suo picco, parrebbe di un altro punto
+          }
           if (occupati.some(o => c2 - m < o[1] && c2 + m > o[0] && Math.abs(q - o[2]) < 11)) continue;
           if (lineaPassa(c2 - m - 2, c2 + m + 2, q - 9, q + 4)) continue;
           cx = c2; py = q;
@@ -2522,7 +2556,7 @@ function apriEliminaCategoria(id) {
   const c = cat(id);
   const usi = dati.movimenti.filter(m => m.categoria === id);
 
-  if (!usi.length) return apriConferma(`Eliminare "${esc(c.nome)}"?`, async () => {
+  if (!usi.length) return apriConferma(`Eliminare "${c.nome}"?`, async () => {
     await eliminaCategoria(id, null);
     chiudiModale(); render();
   });
@@ -2921,16 +2955,26 @@ function caricaEsempio() {
     const idConto = nome => dati.conti.find(c => c.nome === nome).id;
     const contanti = idConto("Contanti"), contoB = idConto("Carta"), satispay = idConto("Satispay");
     const d = giorni => { const x = new Date(oggi); x.setDate(oggi.getDate() - giorni); return iso(x); };
-    const esempi = [
-      {tipo: "entrata", importo: 2400,    data: d(2), nota: "Stipendio",        conto: contoB,   categoria: stipendio},
-      {tipo: "uscita",  importo: 520,     data: d(2), nota: "Affitto",          conto: contoB,   categoria: casa},
-      {tipo: "uscita",  importo: 45.60,   data: d(0), nota: "Supermercato",     conto: satispay, categoria: spesa},
-      {tipo: "uscita",  importo: 1.30,    data: d(0), nota: "Caffè al bar",     conto: contanti, categoria: caffe},
-      {tipo: "uscita",  importo: 12.50,   data: d(1), nota: "Pizzeria",         conto: contanti, categoria: fuori},
-      {tipo: "uscita",  importo: 32.10,   data: d(1), nota: "Spesa",           conto: satispay, categoria: spesa},
-      {tipo: "uscita",  importo: 8.40,    data: d(3), nota: "Caffè e cornetto", conto: contanti, categoria: caffe},
-      {tipo: "uscita",  importo: 15.90,   data: d(4), nota: "Spesa",            conto: contoB,   categoria: spesa}
-    ];
+    // quattro mesi di esempio (richiesta di Daniele, 27 ott): stipendio e
+    // affitto lo stesso giorno — il picco a V del flusso si vede subito —
+    // e attorno le spesucce del quotidiano, piccole e su giorni diversi
+    const esempi = [];
+    for (const fa of [2, 33, 63, 94]) esempi.push(
+      {tipo: "entrata", importo: 2400,  data: d(fa),      nota: "Stipendio",        conto: contoB,   categoria: stipendio},
+      {tipo: "uscita",  importo: 520,   data: d(fa),      nota: "Affitto",          conto: contoB,   categoria: casa},
+      {tipo: "uscita",  importo: 45.60, data: d(fa + 1),  nota: "Supermercato",     conto: satispay, categoria: spesa},
+      {tipo: "uscita",  importo: 12.50, data: d(fa + 3),  nota: "Pizzeria",         conto: contanti, categoria: fuori},
+      {tipo: "uscita",  importo: 1.30,  data: d(fa + 5),  nota: "Caffè al bar",     conto: contanti, categoria: caffe},
+      {tipo: "uscita",  importo: 8.40,  data: d(fa + 8),  nota: "Caffè e cornetto", conto: contanti, categoria: caffe},
+      {tipo: "uscita",  importo: 32.10, data: d(fa + 12), nota: "Spesa",            conto: satispay, categoria: spesa}
+    );
+    // e il presente: oggi e ieri, con le piccole spese della giornata
+    esempi.push(
+      {tipo: "uscita",  importo: 45.60, data: d(0), nota: "Supermercato", conto: satispay, categoria: spesa},
+      {tipo: "uscita",  importo: 1.30,  data: d(0), nota: "Caffè al bar",  conto: contanti, categoria: caffe},
+      {tipo: "uscita",  importo: 12.50, data: d(1), nota: "Pizzeria",      conto: contanti, categoria: fuori},
+      {tipo: "uscita",  importo: 32.10, data: d(1), nota: "Spesa",         conto: satispay, categoria: spesa},
+      {tipo: "uscita",  importo: 15.90, data: d(1), nota: "Spesa",         conto: contoB,   categoria: spesa});
     for (const e of esempi) {
       await dbSalva("movimenti", e); dati.movimenti.push(e);
     }
@@ -2972,8 +3016,10 @@ function chiudiModale() {
 function eventoOverlay(e) { if (e.target.id === "overlay") chiudiModale(); }
 function apriConferma(testo, azione) {
   stato._conferma = azione;
+  // il testo si neutralizza QUI, al punto di rendering: chi chiama non
+  // deve ricordarsi l'escape, e chi ha già dati puliti non ci perde niente
   apriModale(`<h3>Conferma</h3>
-    <p class="avviso" style="font-size:15px;color:var(--testo)">${testo}</p>
+    <p class="avviso" style="font-size:15px;color:var(--testo)">${esc(testo)}</p>
     <div class="azioni-modale" style="margin-top:14px">
       <button class="btn-secondario" onclick="chiudiModale()">Annulla</button>
       <button class="btn-principale" onclick="stato._conferma()">OK</button>
