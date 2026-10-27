@@ -2,10 +2,16 @@
    L'app vive in un file solo: la cache porta offline la pagina e il manifest.
    Strategia: prima la rete (così gli aggiornamenti arrivano sempre freschi),
    la cache è il salvagente quando il telefono non ha segnale.
-   A ogni modifica dell'app alza la versione qui sotto (v1 → v2): alla
-   prossima apertura i telefoni si aggiornano da soli e le cache vecchie
-   vengono buttate via da sole. */
-const NOME = "cunto-v1";
+   A ogni modifica dell'app alza la versione qui sotto: alla prossima
+   apertura i telefoni si aggiornano da soli e le cache vecchie
+   vengono buttate via da sole.
+   v2 (26 ott 2026): niente fili tra i budget, niente linea spessa in Analisi,
+   niente filo sopra i gruppi giorno, «Imposta budget» senza cornice,
+   CSP con img-src 'self' data:
+   v3 (27 ott 2026): giro di revisione del codice — etichette colorate e
+   pallino nel grafico flusso, date impossibili filtrate all'import,
+   avvio blindato contro l'archivio corrotto */
+const NOME = "cunto-v3";
 const FILE = ["./", "./manifest.webmanifest", "icona-192.png", "icona-512.png",
               "icona-512-mascherabile.png", "apple-touch-icon.png"];
 
