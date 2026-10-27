@@ -210,6 +210,13 @@
   .mov .titolo { font-weight: 600; font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .mov .sotto { font-size: 12px; color: var(--neutro); margin-top: 2px; }
   .mov .importo { font-weight: 700; font-size: 15px; white-space: nowrap; }
+  /* Il movimento appena salvato: entra dall'alto e col suo ingresso
+     spinge giù quelli già in lista — la conferma visiva del salvataggio */
+  .mov.nuovo { overflow: hidden; animation: entra-mov .25s ease-out; }
+  @keyframes entra-mov {
+    from { max-height: 0; padding-top: 0; padding-bottom: 0; opacity: 0; }
+    to   { max-height: 80px; padding-top: 13px; padding-bottom: 13px; opacity: 1; }
+  }
   .vuoto { text-align: center; color: var(--neutro); padding: 40px 20px; font-size: 14px; }
 
   /* ============ Fascia 4: menu inferiore ============ */
@@ -361,7 +368,7 @@
   /* Grafico di flusso: solo le due linee, niente assi né griglia */
   .grafico-flusso { display: block; width: 100%; }
   .grafico-flusso text { fill: var(--neutro); font-size: 9px; font-weight: 600; }
-  .grafico-flusso polyline { fill: none; stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+  .grafico-flusso polyline { fill: none; stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round; }
   /* I due pulsanti sotto il grafico: la lingua del selettore entrate/uscite
      del form, più compatti ma alti 44px come ogni cosa da toccare */
   .pulsanti-flusso { display: flex; gap: 8px; justify-content: center; padding: 12px 0 18px; }
@@ -372,7 +379,9 @@
   }
   .pulsanti-flusso button.entrata.sel { background: color-mix(in srgb, var(--verde) 10%, transparent); color: var(--verde); }
   .pulsanti-flusso button.uscita.sel { background: color-mix(in srgb, var(--rosso) 10%, transparent); color: var(--rosso); }
-  /* Le righe dei giorni della sintesi del flusso non si toccano */
+  /* La riga dei "giorni senza uscite" della sintesi del flusso non si tocca
+     (copre tanti giorni insieme, non c'è niente da aprire); le righe dei
+     giorni con le spese, invece, filtrano come quelle delle categorie */
   .riga-statica { cursor: default; }
   .banner-filtro {
     display: flex; align-items: center; justify-content: space-between; gap: 8px;
@@ -920,6 +929,15 @@ const domaniDi = s => { const d = new Date(s + "T12:00:00"); d.setDate(d.getDate
 // "Ieri" vero del calendario, senza sottrarre millisecondi (a mezzanotte del
 // cambio d'ora legale 24 ore esatte potrebbero cadere sul giorno sbagliato)
 const ieriIso = () => { const d = new Date(); d.setDate(d.getDate() - 1); return iso(d); };
+// L'etichetta di un giorno: Oggi, Ieri, poi giorno della settimana e mese
+// per esteso — la usano i gruppi di Movimenti, la sintesi del flusso e il
+// banner del filtro per giorno (uno solo vocabolario in tutta l'app)
+function nomeGiorno(g, oggi = iso(new Date()), ieri = ieriIso()) {
+  if (g === oggi) return "Oggi";
+  if (g === ieri) return "Ieri";
+  const d = new Date(g + "T12:00:00");
+  return cap(GIORNI[d.getDay()]) + " " + d.getDate() + " " + MESI[d.getMonth()];
+}
 
 // Periodi chiusi in ordine cronologico
 const periodiOrdinati = () => [...dati.periodi].sort((a, b) => a.inizio.localeCompare(b.inizio));
@@ -1152,7 +1170,7 @@ function vai(pagina) {
   // Analisi e Budget vivono "dentro" Movimenti per il tasto indietro: entrarci
   // mette una voce nella cronologia, il tasto indietro la consuma riportando
   // a Movimenti (e da lì, col secondo colpo, esce dall'app). Chi arriva a
-  // Movimenti col filtro aperto (categoria, conto o dettaglio budget) non
+  // Movimenti col filtro aperto (categoria, conto, giorno o dettaglio budget) non
   // tocca la voce della sezione: quella del filtro l'ha messa chi l'ha aperto,
   // e dietro c'è comunque la pagina d'origine.
   if (PAGINE.includes(pagina) && PAGINE.includes(stato.pagina) && pagina !== stato.pagina) {
@@ -1201,7 +1219,7 @@ function kpiHtml(ms) {
 function renderMovimenti() {
   let ms = movimentiNelPeriodo();
   let banner = "";
-  if (stato.filtro) {   // filtro attivo: solo i movimenti di quella categoria o conto
+  if (stato.filtro) {   // filtro attivo: solo i movimenti di categoria, conto o giorno
     banner = bannerFiltro();
     ms = ms.filter(m => corrispondeFiltro(m, stato.filtro));
   }
@@ -1218,10 +1236,7 @@ function renderMovimenti() {
   const oggi = iso(new Date());
   const ieri = ieriIso();
   for (const g of gruppi) {
-    const d = new Date(g.data + "T12:00:00");
-    const titolo = g.data === oggi ? "Oggi" : g.data === ieri ? "Ieri"
-      : cap(GIORNI[d.getDay()]) + " " + d.getDate() + " " + MESI[d.getMonth()];
-    lista += `<div class="giorno"><span>${titolo}</span></div>`;
+    lista += `<div class="giorno"><span>${nomeGiorno(g.data, oggi, ieri)}</span></div>`;
     for (const m of g.movs) lista += rigaMovimento(m);
   }
   if (!ms.length) lista = `<div class="vuoto">${speseProgrammate()
@@ -1230,13 +1245,15 @@ function renderMovimenti() {
   return {kpi: kpiHtml(ms), corpo: banner + `<div class="corpo">${lista}</div>`};
 }
 
-// Un movimento corrisponde al filtro categoria/conto/budget attivo?
+// Un movimento corrisponde al filtro categoria/conto/giorno/budget attivo?
 // Il filtro budget è il dettaglio di un budget: solo le spese delle sue categorie
 function corrispondeFiltro(m, f) {
   if (f.tipo === "categoria") {
     const c = cat(m.categoria);
     return (c ? String(c.id) : "nessuna") === f.id;
   }
+  // Il filtro giorno arriva dal tocco sulla sintesi del flusso: le uscite di quel giorno
+  if (f.tipo === "giorno") return m.tipo === "uscita" && m.data === f.id;
   if (f.tipo === "budget") {
     const b = dati.budget.find(x => x.id === Number(f.id));
     return m.tipo === "uscita" && !!b && b.categorie.includes(m.categoria);
@@ -1244,8 +1261,8 @@ function corrispondeFiltro(m, f) {
   return String(m.conto) === f.id;
 }
 
-// Dalla pagina Analisi: tocca categoria o conto per vederne solo i movimenti.
-// Si ricorda da dove è partito il filtro: il ✕ è un ritorno, non un resta lì
+// Dalla pagina Analisi: tocca categoria, conto o giorno per vederne solo i
+// movimenti. Si ricorda da dove è partito il filtro: il ✕ è un ritorno, non un resta lì
 function filtraPer(tipo, id) {
   // Il filtro è una schermata: il tasto indietro la richiude e riporta indietro
   storiaApri();
@@ -1273,6 +1290,8 @@ function bannerFiltro() {
   } else if (f.tipo === "budget") {
     const b = dati.budget.find(x => x.id === Number(f.id));
     ico = icona("bersaglio"); nome = b ? b.nome : "Budget";
+  } else if (f.tipo === "giorno") {
+    ico = icona("calendario"); nome = nomeGiorno(f.id);
   } else {
     const co = conto(Number(f.id));
     ico = icona(co ? co.icona : "portafoglio"); nome = co ? co.nome : "Conto";
@@ -1280,6 +1299,8 @@ function bannerFiltro() {
   return `<div class="banner-filtro"><span>${ico} ${esc(nome)}</span>
     <button onclick="togliFiltro()" aria-label="Togli filtro">✕</button></div>`;
 }
+
+let nuovoMov = null;   // l'ultimo movimento salvato: per l'entrata animata
 
 function rigaMovimento(m) {
   const c = cat(m.categoria), co = conto(m.conto);
@@ -1291,7 +1312,11 @@ function rigaMovimento(m) {
   if (m.nota) parti.push(esc(m.nota));
   const sotto = parti.join(" – ");
   const segno = m.tipo === "entrata" ? "+" : "−";
-  return `<div class="mov" onclick="apriModifica(${m.id})">
+  // Il movimento appena salvato porta la classe per un solo giro di
+  // rendering: qui l'entrata animata consuma il segnale
+  const nuovo = m.id === nuovoMov;
+  if (nuovo) nuovoMov = null;
+  return `<div class="mov${nuovo ? " nuovo" : ""}" onclick="apriModifica(${m.id})">
     <div class="icona-mov">${ico}</div>
     <div class="info">
       <div class="titolo">${esc(titolo)}</div>
@@ -1326,6 +1351,7 @@ function corpoCategorie() {
   if (!voci.length) corpo = `<div class="vuoto">Nessuna spesa in questo periodo.</div>`;
   else {
     const C = 2 * Math.PI * 60;   // grafico a torta: anelli SVG
+    const GAP = voci.length > 1 ? C * 2 / 360 : 0;   // il filo d'aria tra gli spicchi (2°)
     let acc = 0, segmenti = "", legenda = "", barre = "";
     voci.forEach(v => {
       v.perc = totale ? v.totale / totale * 100 : 0;
@@ -1333,8 +1359,14 @@ function corpoCategorie() {
       // var() va nello style, negli attributi di presentazione non funziona
       const col = v.slot ? `var(--cat-${v.slot})` : "var(--neutro)";
       const len = C * v.perc / 100;
+      // Ogni spicchio respira: un filo d'aria per lato lo stacca dai
+      // vicini, così anche una fetta sottile si legge come fetta e non
+      // come un refuso di rendering. Chi è più stretto dell'aria resta
+      // un filetto, ma mai sotto il minimo visibile, centrato nel suo arco
+      const dash = Math.max(len - GAP, Math.min(len, 1.5));
+      const ini = acc + (len - dash) / 2;
       segmenti += `<circle r="60" cx="80" cy="80" fill="none" stroke-width="34" style="stroke:${col}"
-        stroke-dasharray="${len} ${C - len}" stroke-dashoffset="${-acc}" transform="rotate(-90 80 80)"/>`;
+        stroke-dasharray="${dash.toFixed(2)} ${(C - dash).toFixed(2)}" stroke-dashoffset="${(-ini).toFixed(2)}" transform="rotate(-90 80 80)"/>`;
       acc += len;
       legenda += `<div class="voce"><span class="pallino" style="background:${col}"></span>${esc(v.nome)}</div>`;
       barre += `<div class="riga-cat" onclick="filtraPer('categoria','${v.k}')">
@@ -1421,9 +1453,19 @@ function corpoFlusso() {
     return Math.max(m, mostraE ? t.entrata : 0, mostraU ? t.uscita : 0);
   }, 0);
 
-  /* Il grafico: una polylinea per linea, nient'altro. L'etichetta del
-     massimo sta in alto a sinistra; sotto i picchi il numero del giorno,
-     colorato come la sua linea (se coincidono, si scartano di 14) */
+  /* Il grafico: un tratto sottile per linea, con uno snodo (puntino
+     più spesso del filo) su ogni giorno che ha avuto movimento — la
+     spesa si legge puntuale, non solo come profilo. Sotto il picco
+     delle entrate il numero del giorno (verde). Sull'asse in fondo i
+     numeri dei giorni con uscite; dove sarebbero troppo fitti, se ne
+     salta uno. Sopra i quattro picchi di spesa più alti l'importo in
+     rosso: se due etichette si pesterebbero i piedi, resta quella con
+     l'importo più alto e le altre si nascondono; se è una linea del
+     grafico a passarle sopra, prima si sposta un filo (mai lontana
+     dal suo picco) e solo se non c'è posto si nasconde pure lei.
+     L'importo del massimo in alto a sinistra resta solo quando nessun
+     picco porta il suo (le uscite nascoste, per dire, non lascerebbero
+     leggere nessuna scala) */
   let grafico = `<div class="vuoto">Tutte e due le linee sono nascoste.</div>`;
   if (mostraE || mostraU) {
     const L = 8, S = 20, F = 14, W = 320, H = 168;   // lati, sopra, fondo, lato, altezza
@@ -1431,28 +1473,113 @@ function corpoFlusso() {
     const passo = n > 1 ? (W - 2 * L) / (n - 1) : 0;
     const x = i => L + i * passo;
     const y = v => maxVal > 0 ? H - F - (v / maxVal) * (H - S - F) : H - F;
-    const punti = tipo => giorni.map((g, i) =>
-      x(i).toFixed(1) + "," + y(perGiorno.get(g)[tipo]).toFixed(1)).join(" ");
-    // Periodo aperto di un giorno solo (Libero chiuso ieri): una polylinea
-    // di un punto non si disegna, restano i pallini a segnarlo
-    const pallino = (tipo, col) => n === 1
-      ? `<circle cx="${x(0).toFixed(1)}" cy="${y(perGiorno.get(giorni[0])[tipo]).toFixed(1)}" r="3" style="fill:${col}"/>` : "";
+    const puntiDi = tipo => giorni.map((g, i) => [x(i), y(perGiorno.get(g)[tipo])]);
+    const punti = tipo => puntiDi(tipo).map(p => p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ");
+    // Gli snodi: un puntino su ogni giorno che ha avuto davvero un
+    // movimento. Il tratto sottile li lega, il punto dice la spesa —
+    // e segnano anche il periodo di un giorno solo (Libero chiuso
+    // ieri), dove una polylinea di un punto non si vedrebbe
+    const snodi = (tipo, col) => giorni.map((g, i) => perGiorno.get(g)[tipo] > 0
+      ? `<circle cx="${x(i).toFixed(1)}" cy="${y(perGiorno.get(g)[tipo]).toFixed(1)}" r="3" style="fill:${col}"/>` : "").join("");
     const picco = tipo => {
       let mi = 0, mv = -1;
       giorni.forEach((g, i) => { const v = perGiorno.get(g)[tipo]; if (v > mv) { mv = v; mi = i; } });
       return mv > 0 ? {x: x(mi), testo: String(Number(giorni[mi].slice(8)))} : null;
     };
     const etichette = [];
-    const pe = mostraE ? picco("entrata") : null, pu = mostraU ? picco("uscita") : null;
     // lo style e non l'attributo fill: il CSS del grafico scrive fill:neutro
     // sui text, e un attributo di presentazione perderebbe sempre contro di lui
-    if (pe) etichette.push(`<text x="${pe.x.toFixed(1)}" y="${H - 3}" style="fill:var(--verde)">${pe.testo}</text>`);
-    if (pu) etichette.push(`<text x="${Math.max(pu.x, (pe?.x ?? -99) + 14).toFixed(1)}" y="${H - 3}" style="fill:var(--rosso)">${pu.testo}</text>`);
+    const pe = mostraE ? picco("entrata") : null;
+    if (pe) {
+      etichette.push(`<text x="${pe.x.toFixed(1)}" y="${H - 3}" text-anchor="middle" style="fill:var(--verde)">${pe.testo}</text>`);
+    }
+    // Le tacche dell'asse: il numero del giorno sotto ogni giorno con uscite.
+    // Dove sarebbero troppo fitte se ne salta una (13px di lato l'una dall'altra),
+    // e nessuna va a pestare i piedi al numero verde del picco delle entrate,
+    // che sta pure lui qua sotto, ovunque sia capitato il picco
+    if (mostraU) {
+      const verdeX = pe ? pe.x : -99;
+      let ultimoTick = -99;
+      giorni.forEach((g, i) => {
+        const px = x(i);
+        if (perGiorno.get(g).uscita > 0 && px - ultimoTick >= 13 && Math.abs(px - verdeX) >= 13) {
+          etichette.push(`<text x="${px.toFixed(1)}" y="${H - 3}" text-anchor="middle">${Number(g.slice(8))}</text>`);
+          ultimoTick = px;
+        }
+      });
+    }
+    // Gli importi dei quattro giorni di spesa più alti, rosso come la sua
+    // linea: letti lì per lì, senza andare a pescare nella sintesi. Se due
+    // etichette si pesterebbero davvero i piedi, resta quella con l'importo
+    // più alto e le altre si nascondono (richiesta di Daniele). Se invece è
+    // una linea del grafico a passarle sopra, prima si sposta un filo — su,
+    // giù o di lato, sempre restando del suo picco — e solo quando non c'è
+    // proprio posto si nasconde pure lei
+    let conImporti = false;
+    if (mostraU) {
+      const picchi = giorni.map((g, i) => ({i, v: perGiorno.get(g).uscita}))
+        .filter(p => p.v > 0).sort((a, b) => b.v - a.v).slice(0, 4);
+      const occupati = [];   // [sinistra, destra, quota] delle etichette in piazza
+      const mezzo = t => {   // mezza larghezza a 9px: cifre ed € contano il doppio del resto
+        let w = 2;   // un filo d'aria ai lati
+        for (const c of t) w += /[0-9€]/.test(c) ? 5.2 : 2.6;
+        return w / 2;
+      };
+      // Le linee visibili, come coppie di punti: servono a capire se
+      // un'etichetta ci finisce sotto (lo spessore del tratto sta nel margine)
+      const linee = [];
+      if (mostraE) linee.push(puntiDi("entrata"));
+      linee.push(puntiDi("uscita"));
+      // La linea attraversa la finestra dell'etichetta? Segmento per
+      // segmento, alla quota dove la retta entra ed esce dalla finestra
+      const lineaPassa = (ax, bx, ay, by) => linee.some(pts => pts.some((p, k) => {
+        if (!k) return false;
+        const [x1, y1] = pts[k - 1], [x2, y2] = p;
+        if (Math.max(x1, x2) < ax || Math.min(x1, x2) > bx) return false;   // segmento fuori
+        const sc = x2 - x1 || 1e-9;
+        const ta = Math.max(0, Math.min(1, (ax - x1) / sc));
+        const tb = Math.max(0, Math.min(1, (bx - x1) / sc));
+        const qa = y1 + (y2 - y1) * ta, qb = y1 + (y2 - y1) * tb;
+        return Math.max(qa, qb) >= ay && Math.min(qa, qb) <= by;
+      }));
+      // I posti dove un'etichetta può provarsi, in ordine di preferenza:
+      // prima dov'è, poi su/giù di poco, poi di lato, poi entrambi — mai
+      // oltre 18 di quota e 28 di lato: deve restare del suo picco
+      const PROVE = [[0, 0]];
+      for (const [dv, dl] of [[6,0],[0,10],[6,10],[12,0],[0,20],[12,10],
+                              [6,20],[12,20],[18,0],[0,28],[18,20],[12,28],[18,28]])
+        for (const sv of (dv ? [1, -1] : [1]))
+          for (const sl of (dl ? [1, -1] : [1]))
+            PROVE.push([dv * sv, dl * sl]);
+      for (const p of picchi) {
+        const t = eur(arrotonda(p.v)), m = mezzo(t);
+        const cx0 = Math.min(Math.max(x(p.i), L + m), W - L - m);   // mai fuori dal disegno
+        const base = y(p.v) - 7;   // il suo posto naturale: un filo sopra il picco
+        // sul posto naturale c'è già un altro importo: si nasconde, non si
+        // accavalla (regola di Daniele: vince l'importo più alto)
+        if (occupati.some(o => cx0 - m < o[1] && cx0 + m > o[0] && Math.abs(base - o[2]) < 11)) continue;
+        // una linea le passa sopra? si sposta; se nessun posto va bene, si nasconde
+        let cx = -1, py = -1;
+        for (const [dv, dl] of PROVE) {
+          const c2 = Math.min(Math.max(cx0 + dl, L + m), W - L - m);
+          const q = base + dv;
+          if (q < 13 || q > 150) continue;   // mai sopra il cielo né giù nell'asse
+          if (occupati.some(o => c2 - m < o[1] && c2 + m > o[0] && Math.abs(q - o[2]) < 11)) continue;
+          if (lineaPassa(c2 - m - 2, c2 + m + 2, q - 9, q + 4)) continue;
+          cx = c2; py = q;
+          break;
+        }
+        if (cx < 0) continue;   // né lo spazio né uno spostamento piccolo la salvano
+        etichette.push(`<text x="${cx.toFixed(1)}" text-anchor="middle" y="${py.toFixed(1)}" style="fill:var(--rosso)">${t}</text>`);
+        occupati.push([cx - m, cx + m, py]);
+        conImporti = true;
+      }
+    }
     grafico = `<svg class="grafico-flusso" viewBox="0 0 ${W} ${H}">
-      <text x="0" y="10">${eur(maxVal)}</text>
+      ${conImporti ? "" : `<text x="0" y="10">${eur(maxVal)}</text>`}
       ${mostraE ? `<polyline points="${punti("entrata")}" style="stroke:var(--verde)"/>` : ""}
       ${mostraU ? `<polyline points="${punti("uscita")}" style="stroke:var(--rosso)"/>` : ""}
-      ${pallino("entrata", "var(--verde)")}${pallino("uscita", "var(--rosso)")}
+      ${mostraE ? snodi("entrata", "var(--verde)") : ""}${mostraU ? snodi("uscita", "var(--rosso)") : ""}
       ${etichette.join("")}
     </svg>`;
   }
@@ -1464,21 +1591,19 @@ function corpoFlusso() {
   </div>`;
 
   /* La sintesi per giorno: classifica delle uscite dal giorno più vorace;
-     i giorni a zero si riuniscono in una sola riga in fondo (richiesta di
-     Daniele) — le righe non si toccano, non c'è niente da aprire */
+     le righe si toccano e filtrano i movimenti di quel giorno, come le
+     categorie nell'altra pagina. I giorni a zero si riuniscono in una
+     sola riga in fondo (richiesta di Daniele) — quella non si tocca */
   const conUscite = giorni.filter(g => perGiorno.get(g).uscita > 0)
     .sort((a, b) => perGiorno.get(b).uscita - perGiorno.get(a).uscita);
   const totUscite = conUscite.reduce((s, g) => s + perGiorno.get(g).uscita, 0);
   const oggiI = iso(new Date()), ieriI = ieriIso();
-  const etichGiorno = g => g === oggiI ? "Oggi" : g === ieriI ? "Ieri"
-    : cap(GIORNI[new Date(g + "T12:00:00").getDay()]) + " "
-      + new Date(g + "T12:00:00").getDate() + " " + MESI[new Date(g + "T12:00:00").getMonth()];
   let sintesi = "";
   for (const g of conUscite) {
     const tot = arrotonda(perGiorno.get(g).uscita);
     const perc = totUscite ? tot / totUscite * 100 : 0;
-    sintesi += `<div class="riga-cat riga-statica">
-      <div class="testa"><span>${etichGiorno(g)}</span><span>${eur(tot)}</span></div>
+    sintesi += `<div class="riga-cat" onclick="filtraPer('giorno','${g}')">
+      <div class="testa"><span>${nomeGiorno(g, oggiI, ieriI)}</span><span>${eur(tot)}</span></div>
       <div class="riga-barra"><div class="barra"><div class="riempimento" style="width:${perc}%;background:var(--rosso)"></div></div>
         <span class="perc">${perc.toFixed(1).replace(".", ",")}%</span></div>
     </div>`;
@@ -2039,6 +2164,7 @@ async function salvaMovimento() {
   } else {
     await dbSalva("movimenti", m);
     dati.movimenti.push(m);
+    nuovoMov = m.id;   // l'entrata animata è la conferma visiva del salvataggio
   }
   vai(stato.dietro);   // il foglio si chiude sulla pagina da cui era partito
 }
@@ -2981,7 +3107,7 @@ async function migraDati() {
 /* ---- Tasto indietro del telefono ----
    Ogni schermata che copre le sezioni base (foglio del movimento, foglio
    Impostazioni, pagina Modifica periodi, menù a tendina, finestrella/modale,
-   filtro di categoria o conto) lascia una voce nella cronologia del browser:
+   filtro di categoria, conto o giorno) lascia una voce nella cronologia del browser:
    il tasto indietro chiude la schermata aperta. Anche Analisi e Budget
    lasciano la loro voce (voceSezione): il tasto indietro riporta prima a
    Movimenti e da lì, col secondo colpo, esce dall'app. */

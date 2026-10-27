@@ -10,8 +10,15 @@
    CSP con img-src 'self' data:
    v3 (27 ott 2026): giro di revisione del codice — etichette colorate e
    pallino nel grafico flusso, date impossibili filtrate all'import,
-   avvio blindato contro l'archivio corrotto */
-const NOME = "cunto-v3";
+   avvio blindato contro l'archivio corrotto
+   v4 (27 ott 2026): nel grafico flusso le tacche dei giorni con uscite
+   e gli importi sui 4 picchi di spesa; le righe della sintesi per
+   giorno filtrano i movimenti di quel giorno; tratto sottile con
+   uno snodo su ogni giorno con movimento
+   v5 (27 ott 2026): il movimento nuovo entra con l'animazione che
+   spinge giù la lista, la torta di Analisi respira a spicchi col
+   filo d'aria tra le fette */
+const NOME = "cunto-v5";
 const FILE = ["./", "./manifest.webmanifest", "icona-192.png", "icona-512.png",
               "icona-512-mascherabile.png", "apple-touch-icon.png"];
 
