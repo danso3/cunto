@@ -32,6 +32,9 @@
     --bordo: light-dark(#e2e8f0, #243140); --sfondo: light-dark(#f8fafc, #0f141a);
     --carta: light-dark(#fff, #151e28); --accento: light-dark(#2b5f9e, #6aa5e0);
     --testo: light-dark(#1e293b, #dfe8f1); --tenue: light-dark(#eaf1f9, #1c2b3a);
+    /* L'ambra del promemoria dell'export: un alone caldo che si vede
+       uguale nei due temi, nato per questo e per nient'altro */
+    --ambra: light-dark(#d99806, #f2c14e);
     /* Slot colore delle categorie nella torta: uno per riga, assegnato alla
        nascita di ogni categoria e mai più cambiato, così i colori restano
        riconoscibili da un periodo all'altro. La tinta avanza dell'angolo
@@ -69,6 +72,10 @@
     color-scheme: light dark;
   }
   html[data-scuro] { color-scheme: dark; }
+  /* Il chiaro forzato ha bisogno della sua regola: senza di lei un telefono
+     col tema scuro di sistema vincerebbe comunque, e l'app resterebbe scura
+     anche con l'interruttore spento */
+  html[data-chiaro] { color-scheme: light; }
   body {
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     background: var(--sfondo); color: var(--testo); font-size: 16px;
@@ -83,10 +90,12 @@
      overflow-x: clip — il contenuto che entra da destra sfora di 46px per un attimo:
      senza il clip la pagina diventerebbe scrollabile di lato e la fascia fissa in
      basso (fascia 4) sparirebbe e riapparirebbe a ogni entrata da destra.
-     padding-bottom: la barra fissa è alta 56px (44px di pulsanti + 12px d'aria)
-     più la zona sicura del telefono; sopra ci lascio 14px di respiro */
+     padding-bottom: la barra fissa è alta 62px (44px di pulsanti, 6px sopra
+     e 12px sotto: i tasti non finiscono addosso alla barra indietro/home
+     del telefono, che i telefoni non riportano come zona sicura quando
+     usa i tre tasti) più la zona sicura quando c'è; sopra 14px di respiro */
   #app { max-width: 480px; margin: 0 auto; min-height: 100vh;
-         padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+         padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
          touch-action: manipulation; overflow-x: clip; }
   /* Foglio "nuovo movimento": sale dal basso sopra la pagina precedente */
   .sheet {
@@ -143,7 +152,17 @@
   .btn-puntini {
     background: none; border: none; font-size: 22px; padding: 10px;
     border-radius: 8px; color: var(--neutro); font-weight: 700;
-    margin-left: auto;
+    /* primo figlio della fascia: sta a sinistra da solo (spostato da destra
+       il 6 nov 2026, chiesto da Daniele: ci arriva prima il pollice) */
+  }
+  /* L'alone del promemoria dell'export manuale (il gruppo Dati delle
+     impostazioni racconta il resto): un anello ambra da 2px con un filo
+     di bagliore, attorno al tasto ⋮ e attorno alla voce dell'esportazione,
+     quando l'ultima copia scaricata ha più di due settimane */
+  .promemoria {
+    box-shadow: 0 0 0 2px var(--ambra),
+                0 0 10px color-mix(in srgb, var(--ambra) 45%, transparent);
+    border-radius: 8px;
   }
   /* Freccia inibita ai limiti della navigazione (periodo aperto / più vecchio) */
   .btn-freccia.fermo { opacity: .25; pointer-events: none; }
@@ -225,7 +244,7 @@
     width: 100%; max-width: 480px;
     display: grid; grid-template-columns: 1fr 1fr 1fr 1fr;
     background: var(--sfondo);
-    padding: 6px 0 max(6px, env(safe-area-inset-bottom)); z-index: 10;
+    padding: 6px 0 max(12px, calc(env(safe-area-inset-bottom, 0px) + 6px)); z-index: 10;
   }
   .nav-basso button {
     background: none; border: none; display: flex; flex-direction: column;
@@ -841,20 +860,45 @@ function apriDB() {
 }
 
 const tabella = (s, m) => db.transaction(s, m).objectStore(s);
+
+/* Lo «sporco»: qualcosa è cambiato nel database dall'ultima fotografia.
+   È lui che decide se la foto di giornata scatta alla chiusura — aprire
+   l'app soltanto per guardare non sporca niente. Vive in localStorage,
+   così sopravvive a un'apertura finita male: il telefono che ammazza
+   l'app senza eventi di chiusura lascia lo sporco acceso e il prossimo
+   avvio fa la fotografia lui */
+let sporcoVivo = false;
+function sporcoAcceso() {
+  if (!sporcoVivo) { try { sporcoVivo = localStorage.getItem("sporco") === "1"; } catch {} }
+  return sporcoVivo;
+}
+function sporcoAccende() {
+  sporcoVivo = true;
+  try { localStorage.setItem("sporco", "1"); } catch {}
+}
+function sporcoPulito() {
+  sporcoVivo = false;
+  try { localStorage.removeItem("sporco"); } catch {}
+}
+
 async function dbSalva(s, obj) {
   if (db) {
     const o = tabella(s, "readwrite");
     // Le impostazioni usano "chiave" come chiave: il put inserisce o
     // aggiorna senza mai andare in conflitto con il record esistente
-    if (s === "impostazioni") { await prom(o.put(obj)); return; }
-    if (obj.id == null) obj.id = await prom(o.add(obj));
+    if (s === "impostazioni") await prom(o.put(obj));
+    else if (obj.id == null) obj.id = await prom(o.add(obj));
     else await prom(o.put(obj));
   } else if (s !== "impostazioni" && obj.id == null) {
     // Senza IndexedDB: in memoria le impostazioni vivono già in dati
     obj.id = dati._id[s]++;
   }
+  if (s !== "backup") sporcoAccende();   // una scrittura riuscita è una modifica: la foto di giornata ha materia
 }
-async function dbElimina(s, id) { if (db) await prom(tabella(s, "readwrite").delete(id)); }
+async function dbElimina(s, id) {
+  if (db) await prom(tabella(s, "readwrite").delete(id));
+  if (s !== "backup") sporcoAccende();   // eliminare è cambiare, come scrivere
+}
 
 async function caricaTutto() {
   if (db) {
@@ -1011,8 +1055,7 @@ async function chiudiPeriodo(fine) {
   const p = {inizio, fine};
   await dbSalva("periodi", p); dati.periodi.push(p);
   dati.impostazioni.liberoInizio = domaniDi(fine);   // il nuovo aperto parte domani
-  await salvaImpostazioni();
-  await backupAuto("chiusura");   // la fotografia della chiusura, etichettata col periodo che inizia: il prossimo avvio non ne farà una gemella
+  await salvaImpostazioni();   // niente foto qui: la chiusura sporca il database e ci pensa la foto di giornata quando l'app si mette in tasca
   stato.offset = -1;   // mostra il periodo appena chiuso
   stato._menu = false;
   render();
@@ -1132,12 +1175,12 @@ function render() {
   document.getElementById("app").innerHTML = `
     <div class="testa-fissa">
     <div class="fascia1${stato._menu ? " con-menu" : ""}">
+      <button class="btn-puntini${promemoriaExport() ? " promemoria" : ""}" onclick="vai('impostazioni')">⋮</button>
       <div class="nav-periodo">
         <button class="btn-freccia${fermoSx ? " fermo" : ""}" onclick="spostaPeriodo(-1)">‹</button>
         <span class="etichetta-periodo${dirE ? " " + dirE : ""}">${etichetta}</span>
         <button class="btn-freccia${fermoDx ? " fermo" : ""}" onclick="spostaPeriodo(1)">›</button>
       </div>
-      <button class="btn-puntini" onclick="vai('impostazioni')">⋮</button>
       ${sospeso}
     </div>
     ${pagina.kpi}
@@ -2392,7 +2435,7 @@ function foglioImpostazioni() {
         ${dati.backup.length ? `<div class="lista-backup">
           ${dati.backup.map(b => `<div class="riga-backup"><span>${quandoBackup(b)}</span><button class="btn-testo ripristina" onclick="ripristinaBackup(${b.id})">Ripristina</button></div>`).join("")}
         </div>` : ""}
-        <button class="btn-testo" onclick="esportaJSON()">${icona("scarica")} Esporta backup (JSON)</button>
+        <button class="btn-testo${promemoriaExport() ? " promemoria" : ""}" onclick="esportaJSON()">${icona("scarica")} Esporta backup (JSON)</button>
         <button class="btn-testo" onclick="esportaCSV()">${icona("scarica")} Esporta movimenti (CSV)</button>
         <button class="btn-testo" onclick="document.getElementById('fileImport').click()">${icona("carica")} Importa backup (JSON)</button>
         <input type="file" id="fileImport" accept=".json,application/json" style="display:none" onchange="importaJSON(this)">
@@ -2413,8 +2456,13 @@ const temaAttivoScuro = () => dati.impostazioni?.temaScuro === true
 
 function applicaTema() {
   const scuro = temaAttivoScuro();
-  // Nell'anteprima senza DOM vero documentElement non esiste: si salta e basta
-  if (document.documentElement) document.documentElement.toggleAttribute("data-scuro", scuro);
+  // Nell'anteprima senza DOM vero documentElement non esiste: si salta e basta.
+  // Il chiaro forzato va dichiarato anche lui: data-scuro da solo non basta
+  // a vincere contro il tema scuro di sistema quando si chiede il chiaro
+  if (document.documentElement) {
+    document.documentElement.toggleAttribute("data-scuro", dati.impostazioni?.temaScuro === true);
+    document.documentElement.toggleAttribute("data-chiaro", dati.impostazioni?.temaScuro === false);
+  }
   const meta = document.getElementById("metaTema");
   if (meta) meta.content = scuro ? "#0f141a" : "#f8fafc";
 }
@@ -2427,7 +2475,7 @@ async function toggleTema() {
 }
 
 /* Il backup automatico: acceso di default (spento si salva esplicito).
-   L'interruttore comanda solo le istantanee di periodo; quelle di
+   L'interruttore comanda solo le foto di giornata; quelle di
    sicurezza prima di una sostituzione restano sempre */
 async function toggleBackupAuto() {
   const acceso = dati.impostazioni.backupAuto !== false;   // assente = acceso
@@ -2696,9 +2744,32 @@ const corpoBackup = () => ({versione: 3, esportatoIl: iso(new Date()),
   movimenti: dati.movimenti, categorie: dati.categorie, conti: dati.conti,
   budget: dati.budget, periodi: dati.periodi, impostazioni: {...dati.impostazioni}});
 
+/* Il promemoria dell'export manuale: l'unica copia dei dati che vive
+   fuori dall'app è il file scaricato, e una copia scaricata due
+   settimane fa è già un ricordo. La data dell'ultimo export JSON sta
+   in localStorage («ultimoExport», il giorno in forma ISO) come lo
+   sporco, con la stessa memoria di fortuna se il browser rifiuta la
+   memoria; NON viaggia col backup: è un ricordo di questo telefono.
+   Chi non ha mai esportato vede l'alone subito (nessuna copia è
+   l'urgenza massima) e il CSV non conta: l'import accetta solo JSON.
+   Si rilegge a ogni rendering, così il valore non resta mai appiccicato */
+let ultimoExportVivo = null;   // memoria di fortuna senza localStorage
+function promemoriaExport() {
+  let ultima = null;
+  try { ultima = localStorage.getItem("ultimoExport"); } catch { ultima = ultimoExportVivo; }
+  if (!ultima || isNaN(Date.parse(ultima))) return true;   // mai scaricata (o data spastacciata)
+  return (Date.parse(iso(new Date())) - Date.parse(ultima)) / 86400000 > 14;   // il quindicesimo giorno accende
+}
+function segnaExport() {
+  ultimoExportVivo = iso(new Date());
+  try { localStorage.setItem("ultimoExport", ultimoExportVivo); } catch {}
+}
+
 function esportaJSON() {
   scarica(`finanze_backup_${iso(new Date())}.json`, JSON.stringify(corpoBackup(), null, 2), "application/json");
+  segnaExport();   // la copia fuori è fresca: l'alone del promemoria si spegne
   toast("Backup esportato");
+  renderTenendoIlFoglio();   // ridisegna col foglio aperto: l'alone se ne va subito
 }
 
 /* ---- Backup automatici (interruttore in Impostazioni → Dati) ----
@@ -2707,12 +2778,11 @@ function esportaJSON() {
    del browser: l'unica copia fuori dall'app resta l'esportazione manuale
    (che non viene mai toccata: è un file scaricato, la rotazione riguarda
    solo le istantanee). Scatti:
-   - "periodo": all'avvio, se l'ultima istantanea non è già di questo
-     periodo — così in Settimanale e Mensile, che non si chiudono a mano,
-     il cambio di mese/settimana fa la sua fotografia;
-   - "chiusura": chiudendo un periodo in Libero, prima che il nuovo aperto
-     compaia (l'etichetta è il periodo che INIZIA: il giorno dopo l'avvio
-     non ne fa una gemella);
+   - "giorno": alla CHIUSURA dell'app (pagina che si nasconde o se ne va),
+     SOLO se qualcosa è cambiato dall'ultima fotografia — chi apre l'app
+     per guardare non sporca la memoria. Una sola per giornata: l'ultima
+     chiusura del giorno vince, tanto ogni azione scrive subito sul disco
+     e la foto contiene comunque tutto;
    - "sicurezza": SEMPRE, anche a interruttore spento, prima di sostituire
      tutti i dati (import, ripristino, dati di esempio): lo stato di prima
      resta recuperabile. Il motivo viaggia nel record (diagnostica), in
@@ -2721,15 +2791,32 @@ const quandoBackup = b => { const d = new Date(b.quando);
   return d.getDate() + " " + MESI_BREVI[d.getMonth()] + " " + d.getFullYear()
     + ", " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); };
 
+let fotoInCorso = false;   // semaforo della foto di giornata: una per volta
 async function backupAuto(tipo) {
+  // I due eventi di chiusura possono arrivare nella stessa manciata: senza
+  // semaforo entrambi vedrebbero lo sporco acceso prima che la prima foto
+  // finisca, e nascerebbero due foto dello stesso giorno, con due dei tre
+  // slot occupati. La sicurezza non è in gara con nessuno: passa sempre
+  if (tipo !== "sicurezza" && fotoInCorso) return;
+  if (tipo !== "sicurezza") fotoInCorso = true;
+  try { await backupAutoDentro(tipo); }
+  finally { if (tipo !== "sicurezza") fotoInCorso = false; }   // si riapre anche se la foto è andata storta
+}
+async function backupAutoDentro(tipo) {
   const b = {quando: Date.now(), motivo: tipo};
-  if (tipo !== "sicurezza") {   // le istantanee di periodo: interruttore e una sola per periodo
+  if (tipo !== "sicurezza") {   // la foto di giornata: interruttore, sporco e una sola al giorno
     if (dati.impostazioni?.backupAuto === false) return;
-    b.inizio = iso(periodo().da);
-    if (dati.backup.some(x => x.inizio === b.inizio)) return;
+    if (!sporcoAcceso()) return;   // niente di nuovo: si guarda e basta
+    b.giorno = iso(new Date());
+    // la foto di oggi sostituisce la foto di oggi: l'ultima chiusura vince
+    for (const vecchia of dati.backup.filter(x => x.motivo === "giorno" && x.giorno === b.giorno)) {
+      await dbElimina("backup", vecchia.id);
+      dati.backup = dati.backup.filter(x => x.id !== vecchia.id);
+    }
   }
   b.dati = JSON.stringify(corpoBackup());
   await dbSalva("backup", b); dati.backup.push(b);
+  sporcoPulito();   // fotografato: il database torna pulito fino alla prossima modifica
   // Rotazione: al massimo tre, il più vecchio se ne va
   while (dati.backup.length > 3) {
     const vecchio = dati.backup.reduce((m, x) => x.quando < m.quando ? x : m);
@@ -2737,6 +2824,17 @@ async function backupAuto(tipo) {
     dati.backup = dati.backup.filter(x => x.id !== vecchio.id);
   }
 }
+
+/* La chiusura dell'app: quando lo schermo si nasconde (telefono in tasca,
+   cambio app, schermo spento) o la pagina se ne va. I due eventi possono
+   arrivare insieme: il semaforo lascia partire solo la prima fotografia,
+   la seconda non ha più materia. Se il telefono ammazza l'app senza
+   salutare, lo sporco resta acceso e il prossimo avvio fa la fotografia lui */
+const fotografaGiornata = () => backupAuto("giorno");
+if (document.addEventListener) document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") fotografaGiornata();
+});
+if (window.addEventListener) window.addEventListener("pagehide", fotografaGiornata);
 
 // Campo CSV: i valori che iniziano con = + - @ potrebbero essere letti come
 // formule da un foglio di calcolo, quindi vengono anticipati da un apice.
@@ -2748,11 +2846,15 @@ const escapeCSV = s => {
 };
 
 function esportaCSV() {
-  const nome = id => { const c = cat(id) || conto(id); return c ? escapeCSV(c.nome) : ""; };
+  // Categoria e conto si cercano ognuno nella SUA collezione: gli id nascono
+  // indipendenti (uno per collezione) e si sovrappongono, quindi una ricerca
+  // unica metterebbe il nome della categoria nella colonna Conto
+  const nomeCat = id => { const c = cat(id); return c ? escapeCSV(c.nome) : ""; };
+  const nomeConto = id => { const c = conto(id); return c ? escapeCSV(c.nome) : ""; };
   const righe = ["Data;Direzione;Importo;Categoria;Conto;Nota"];
   for (const m of [...dati.movimenti].sort((a, b) => a.data.localeCompare(b.data)))
     righe.push([escapeCSV(m.data), m.tipo, m.importo.toFixed(2).replace(".", ","),
-      nome(m.categoria), nome(m.conto), escapeCSV(m.nota || "")].join(";"));
+      nomeCat(m.categoria), nomeConto(m.conto), escapeCSV(m.nota || "")].join(";"));
   scarica(`finanze_movimenti_${iso(new Date())}.csv`, "\ufeff" + righe.join("\r\n"), "text/csv");
 }
 
@@ -2882,9 +2984,9 @@ async function sostituisciDati(b, titolo) {
       if (nuovo.periodi.length) {
         const ord = [...nuovo.periodi].sort((x, y) => x.inizio.localeCompare(y.inizio));
         const fine = ord[ord.length - 1].fine;
-        // liberoInizio deve restare una data ISO: una stringa qualsiasi
-        // passata dal backup romperebbe il periodo aperto
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(String(imp.liberoInizio ?? "")) || imp.liberoInizio <= fine)
+        // liberoInizio deve restare una data ISO VERA: la sola forma
+        // lascerebbe entrare un 31 febbraio e romperebbe il periodo aperto
+        if (!dataOk(String(imp.liberoInizio ?? "")) || imp.liberoInizio <= fine)
           imp.liberoInizio = domaniDi(fine);
       } else {
         const gen = generaPeriodiLibero(daLibera, nuovo.movimenti, gReset);
@@ -3225,7 +3327,7 @@ window.addEventListener("popstate", () => {
   try { await caricaTutto(); } catch { db = null; bannerMemoria(); }
   await migraDati();
   await semina();
-  await backupAuto("periodo");   // il primo avvio dentro un periodo nuovo ne fotografa l'inizio (una sola per periodo)
+  await backupAuto("giorno");   // se l'app era stata chiusa male, qui finisce la foto rimasta in sospeso (senza modifiche non fa nulla)
   if (navigator.storage?.persist) { try { await navigator.storage.persist(); } catch {} }
   applicaTema();
   // Il sistema può cambiare idea mentre l'app è aperta: lo si segue, salvo forzatura
