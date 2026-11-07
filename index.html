@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" id="metaTema" content="#f8fafc">
-<!-- v12: fascia 4 a misura dei pulsanti, addossata ai tasti di sistema -->
+<meta name="theme-color" content="#4f5f70">
+<!-- v13: palette Blu bruma: il cielo #4f5f70 è fisso, le fasce di sistema non seguono più il tema -->
 <!-- La CSP vieta qualunque risorsa esterna: l'app non può comunicare in rete
      anche per errore. Per la pubblicazione si aprono soltanto manifest e
      service worker, che restano nella stessa origine del sito. img-src deve
@@ -23,19 +23,26 @@
 <title>Cunto de li Cunti</title>
 <style>
   /* ============ Base ============ */
-  /* Palette «Blu notte»: di giorno chiara, di notte quella del piano.
-     light-dark() sceglie la tinta secondo il color-scheme: di default
-     segue il sistema, l'interruttore nelle Impostazioni forza lo scuro */
+  /* Palette «Blu bruma»: il cielo è uno e fisso (#4f5f70), uguale con il
+     telefono chiaro o scuro, così le fasce di sistema non devono più
+     seguirlo. light-dark() continua a scegliere le tinte del CONTENUTO
+     (le carte) secondo il color-scheme: il sistema, o l'interruttore */
   * { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
     --verde: light-dark(#157a4a, #54c08d); --rosso: light-dark(#c0392b, #e27263);
-    --neutro: light-dark(#5b6b7e, #8296ab);
-    --bordo: light-dark(#e2e8f0, #243140); --sfondo: light-dark(#f8fafc, #0f141a);
-    --carta: light-dark(#fff, #151e28); --accento: light-dark(#2b5f9e, #6aa5e0);
-    --testo: light-dark(#1e293b, #dfe8f1); --tenue: light-dark(#eaf1f9, #1c2b3a);
+    --neutro: light-dark(#5b6875, #97a3b0);
+    --bordo: light-dark(#dbe1e9, #232d39); --sfondo: #4f5f70;
+    --carta: light-dark(#f2f5f8, #131a22); --accento: light-dark(#2b5f9e, #6aa5e0);
+    --testo: light-dark(#1b2631, #e6ecf2); --tenue: light-dark(#e4ecf5, #1b2531);
     /* L'ambra del promemoria dell'export: un alone caldo che si vede
        uguale nei due temi, nato per questo e per nient'altro */
     --ambra: light-dark(#d99806, #f2c14e);
+    /* Colori del cromo (il cielo fisso): scritte, frecce e voci che stanno
+       direttamente sul #4f5f70, uguali nei due temi */
+    --cromo-testo: #e9eef4;
+    --cromo-accento: #a4c8ee;
+    --cromo-spento: #b9c7d6;
+    --cromo-filo: rgba(233, 238, 244, .28);
     /* Slot colore delle categorie nella torta: uno per riga, assegnato alla
        nascita di ogni categoria e mai più cambiato, così i colori restano
        riconoscibili da un periodo all'altro. La tinta avanza dell'angolo
@@ -67,9 +74,9 @@
        qui il colore va per posizione, non per categoria, e quando le tinte
        finiscono si ricomincia — possono anche ripetersi) */
     --bud-1: var(--accento);
-    --bud-2: color-mix(in srgb, var(--accento) 70%, var(--sfondo));
-    --bud-3: color-mix(in srgb, var(--accento) 45%, var(--sfondo));
-    --bud-4: color-mix(in srgb, var(--accento) 25%, var(--sfondo));
+    --bud-2: color-mix(in srgb, var(--accento) 70%, var(--carta));
+    --bud-3: color-mix(in srgb, var(--accento) 45%, var(--carta));
+    --bud-4: color-mix(in srgb, var(--accento) 25%, var(--carta));
     color-scheme: light dark;
   }
   html[data-scuro] { color-scheme: dark; }
@@ -125,7 +132,7 @@
   .fascia1 {
     position: relative;   /* il menù di chiusura pende da qui */
     background: var(--sfondo);
-    border-bottom: 1px solid var(--bordo);
+    border-bottom: 1px solid var(--cromo-filo); color: var(--cromo-testo);
     display: flex; align-items: center;
     padding: 10px 12px;
   }
@@ -145,10 +152,14 @@
     padding: 10px 14px; border-radius: 8px;
   }
   .btn-freccia:active { background: color-mix(in srgb, currentColor 8%, transparent); }
+  /* Sul cielo le frecce del periodo e il tasto «oggi» prendono l'accento
+     del cromo: quello del tema, di giorno, non si leggerebbe */
+  .fascia1 .btn-freccia { color: var(--cromo-accento); }
+  .btn-oggi { color: var(--cromo-accento); }
   .etichetta-periodo { font-weight: 600; font-size: 15px; }
   .btn-puntini {
     background: none; border: none; font-size: 22px; padding: 10px;
-    border-radius: 8px; color: var(--neutro); font-weight: 700;
+    border-radius: 8px; color: var(--cromo-testo); font-weight: 700;
     /* primo figlio della fascia: sta a sinistra da solo (spostato da destra
        il 6 nov 2026, chiesto da Daniele: ci arriva prima il pollice) */
   }
@@ -200,7 +211,10 @@
   .menu-locale button.pericoloso { color: var(--rosso); font-weight: 700; }
 
   /* ============ Fascia 2: riepilogo ============ */
-  .kpi { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; padding: 12px; }
+  /* La carta del riepilogo galleggia sul cielo: solo margine e angoli,
+     niente ombra (il confine è un separatore, non una scatola) */
+  .kpi { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; padding: 12px;
+         background: var(--carta); border-radius: 14px; margin: 8px 12px 12px; }
   .kpi2 { grid-template-columns: 1fr 1fr; }
   .kpi .casella { padding: 10px 6px; text-align: center; }
   .kpi .casella .titolo { font-size: 11px; color: var(--neutro); text-transform: uppercase; letter-spacing: .5px; }
@@ -208,7 +222,8 @@
   .verde { color: var(--verde); } .rosso { color: var(--rosso); } .neutro { color: var(--neutro); }
 
   /* ============ Corpo principale ============ */
-  .corpo { padding: 4px 12px 12px; }
+  .corpo { padding: 4px 12px 12px;
+           background: var(--carta); border-radius: 14px; margin: 0 12px 16px; }
   .giorno {
     font-size: 12px; font-weight: 700; color: var(--neutro);
     text-transform: uppercase; letter-spacing: .5px; margin: 20px 2px 6px;
@@ -252,7 +267,7 @@
   .nav-basso button {
     background: none; border: none; display: flex; flex-direction: column;
     align-items: center; justify-content: center; gap: 2px; font-size: 11px;
-    color: var(--neutro); padding: 6px 0; min-height: 44px; transition: background .1s;
+    color: var(--cromo-spento); padding: 6px 0; min-height: 44px; transition: background .1s;
   }
   .nav-basso button.attivo { background: var(--tenue); color: var(--accento); font-weight: 700; }
   .nav-basso button .icona { font-size: 22px; }
@@ -438,7 +453,7 @@
   .traguardi .filo { position: absolute; top: 0; width: 1px; background: var(--neutro); }
   .traguardi .etichetta { position: absolute; top: 0;
                     font-size: 10px; line-height: 16px; color: var(--neutro); white-space: nowrap;
-                    padding: 0 3px; background: var(--sfondo); }
+                    padding: 0 3px; background: var(--carta); }
   .traguardi .fine { right: 0; font-weight: 700; }
   .riga-budget .rimanente { font-size: 13px; margin-top: 4px; color: var(--neutro); }
   .sforato .rimanente { color: var(--rosso); font-weight: 700; }
@@ -456,6 +471,14 @@
   /* ============ Impostazioni ============ */
   /* Foglio piatto: gruppi con titolo maiuscolo, niente scatole */
   .pag-impostazioni { padding: 12px; }
+  /* «Modifica periodi» occupa lo schermo intero senza foglio: si veste
+     come le altre pagine, una carta sola dal titolo in giù. I selettori
+     col > valgono solo per i figli diretti di #app: nel foglio
+     Impostazioni gli stessi elementi restano piatti sulla sua carta */
+  #app > .intestazione-pagina { background: var(--carta); margin: 8px 12px 0;
+                                border-radius: 14px 14px 0 0; border-bottom: none; }
+  #app > .pag-impostazioni { background: var(--carta); margin: 0 12px 16px;
+                             border-radius: 0 0 14px 14px; }
   .gruppo { margin-bottom: 24px; }
   .titolo-gruppo { font-size: 12px; font-weight: 700; color: var(--neutro); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
   /* Sezione Categorie/Conti: il titolo è un bottone che la apre e la chiude */
@@ -2461,10 +2484,11 @@ const temaAttivoScuro = () => dati.impostazioni?.temaScuro === true
 function applicaTema() {
   const scuro = temaAttivoScuro();
   // Nell'anteprima senza DOM vero documentElement non esiste: si salta e basta.
+  // Le fasce di sistema non possono seguire il tema del telefono: col cielo
+  // fisso di Blu bruma la barra è #4f5f70 una volta per tutte (il meta è
+  // statico nell'head), e qui si aggiorna solo il color-scheme del contenuto
   // data-scuro segue il tema RISOLTO: la forzatura accesa, o la notte del sistema
   if (document.documentElement) document.documentElement.toggleAttribute("data-scuro", scuro);
-  const meta = document.getElementById("metaTema");
-  if (meta) meta.content = scuro ? "#0f141a" : "#f8fafc";
 }
 
 async function toggleTema() {
