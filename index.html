@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" id="metaTema" content="#f8fafc">
-<!-- v10: deploy del giro 18, tema spento = segue il sistema -->
+<!-- v12: fascia 4 a misura dei pulsanti, addossata ai tasti di sistema -->
 <!-- La CSP vieta qualunque risorsa esterna: l'app non può comunicare in rete
      anche per errore. Per la pubblicazione si aprono soltanto manifest e
      service worker, che restano nella stessa origine del sito. img-src deve
@@ -87,12 +87,12 @@
      overflow-x: clip — il contenuto che entra da destra sfora di 46px per un attimo:
      senza il clip la pagina diventerebbe scrollabile di lato e la fascia fissa in
      basso (fascia 4) sparirebbe e riapparirebbe a ogni entrata da destra.
-     padding-bottom: la barra fissa è alta 62px (44px di pulsanti, 6px sopra
-     e 12px sotto: i tasti non finiscono addosso alla barra indietro/home
-     del telefono, che i telefoni non riportano come zona sicura quando
-     usa i tre tasti) più la zona sicura quando c'è; sopra 14px di respiro */
+     padding-bottom: la barra fissa è alta 44px (i pulsanti soli: la fascia
+     li abbraccia esatti e sta addossata alla barra del telefono, voluto
+     da Daniele nel giro 20) più la zona sicura quando c'è; sopra 14px
+     di respiro */
   #app { max-width: 480px; margin: 0 auto; min-height: 100vh;
-         padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+         padding-bottom: calc(58px + env(safe-area-inset-bottom, 0px));
          touch-action: manipulation; overflow-x: clip; }
   /* Foglio "nuovo movimento": sale dal basso sopra la pagina precedente */
   .sheet {
@@ -236,12 +236,18 @@
   .vuoto { text-align: center; color: var(--neutro); padding: 40px 20px; font-size: 14px; }
 
   /* ============ Fascia 4: menu inferiore ============ */
+  /* La fascia abbraccia ESATTI i pulsanti (44px, niente spazio sopra né
+     sotto) e sta addossata al punto più basso che il sistema concede:
+     l'unica aria rimasta è la zona sicura, che coi tre tasti del telefono
+     di Daniele è zero (la barra del sistema è fuori dallo schermo dell'app,
+     la dipinge Chrome col colore del manifest) e coi gesti resta a
+     proteggere la barretta */
   .nav-basso {
     position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
     width: 100%; max-width: 480px;
     display: grid; grid-template-columns: 1fr 1fr 1fr 1fr;
     background: var(--sfondo);
-    padding: 6px 0 max(12px, calc(env(safe-area-inset-bottom, 0px) + 6px)); z-index: 10;
+    padding: 0 0 env(safe-area-inset-bottom, 0px); z-index: 10;
   }
   .nav-basso button {
     background: none; border: none; display: flex; flex-direction: column;
