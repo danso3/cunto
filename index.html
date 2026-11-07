@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" id="metaTema" content="#f8fafc">
+<!-- v10: deploy del giro 18, tema spento = segue il sistema -->
 <!-- La CSP vieta qualunque risorsa esterna: l'app non può comunicare in rete
      anche per errore. Per la pubblicazione si aprono soltanto manifest e
      service worker, che restano nella stessa origine del sito. img-src deve
@@ -72,10 +73,6 @@
     color-scheme: light dark;
   }
   html[data-scuro] { color-scheme: dark; }
-  /* Il chiaro forzato ha bisogno della sua regola: senza di lei un telefono
-     col tema scuro di sistema vincerebbe comunque, e l'app resterebbe scura
-     anche con l'interruttore spento */
-  html[data-chiaro] { color-scheme: light; }
   body {
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     background: var(--sfondo); color: var(--testo); font-size: 16px;
@@ -2448,21 +2445,18 @@ function foglioImpostazioni() {
 }
 
 /* ---- Tema: chiaro di giorno, scuro di notte, come dice il sistema.
-   L'interruttore forza lo scuro e la scelta viaggia con le impostazioni ---- */
+   L'interruttore serve a chi vuole il tema scuro ANCHE di giorno: spento
+   (o mai toccato) l'app segue il sistema. Il «chiaro forzato» non esiste:
+   di notte il telefono è scuro e l'app con lui ---- */
 // matchMedia può mancare (anteprima): si resta sul chiaro, salvo forzatura
 const temaAttivoScuro = () => dati.impostazioni?.temaScuro === true
-  || (dati.impostazioni?.temaScuro !== false
-      && (window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)").matches : false));
+  || (window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)").matches : false);
 
 function applicaTema() {
   const scuro = temaAttivoScuro();
   // Nell'anteprima senza DOM vero documentElement non esiste: si salta e basta.
-  // Il chiaro forzato va dichiarato anche lui: data-scuro da solo non basta
-  // a vincere contro il tema scuro di sistema quando si chiede il chiaro
-  if (document.documentElement) {
-    document.documentElement.toggleAttribute("data-scuro", dati.impostazioni?.temaScuro === true);
-    document.documentElement.toggleAttribute("data-chiaro", dati.impostazioni?.temaScuro === false);
-  }
+  // data-scuro segue il tema RISOLTO: la forzatura accesa, o la notte del sistema
+  if (document.documentElement) document.documentElement.toggleAttribute("data-scuro", scuro);
   const meta = document.getElementById("metaTema");
   if (meta) meta.content = scuro ? "#0f141a" : "#f8fafc";
 }
