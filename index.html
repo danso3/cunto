@@ -152,10 +152,9 @@
     padding: 10px 14px; border-radius: 8px;
   }
   .btn-freccia:active { background: color-mix(in srgb, currentColor 8%, transparent); }
-  /* Sul cielo le frecce del periodo e il tasto «oggi» prendono l'accento
-     del cromo: quello del tema, di giorno, non si leggerebbe */
+  /* Sul cielo le frecce del periodo prendono l'accento del cromo: quello
+     del tema, di giorno, non si leggerebbe */
   .fascia1 .btn-freccia { color: var(--cromo-accento); }
-  .btn-oggi { color: var(--cromo-accento); }
   .etichetta-periodo { font-weight: 600; font-size: 15px; }
   .btn-puntini {
     background: none; border: none; font-size: 22px; padding: 10px;
@@ -174,9 +173,15 @@
   }
   /* Freccia inibita ai limiti della navigazione (periodo aperto / più vecchio) */
   .btn-freccia.fermo { opacity: .25; pointer-events: none; }
-  /* La parola "oggi" del periodo aperto: pulsante che apre il menù di chiusura */
+  /* La parola "oggi" del periodo aperto: pulsante che apre il menù di chiusura.
+     Sta sul cielo come le frecce, ma l'accento del tema di giorno era un blu
+     che nel blu del cielo si perdeva (e la regola che lo ridipingeva di cromo
+     restava coperta da questa, stessa specificità): di giorno un azzurro
+     chiaro che si legge, di notte il cromo-accento (richiesta di Daniele,
+     8 nov 2026) */
   .btn-oggi {
-    background: none; border: none; color: var(--accento);
+    background: none; border: none;
+    color: light-dark(#d9e9fb, var(--cromo-accento));
     font-weight: 700; font-size: 15px; padding: 0; font-family: inherit;
   }
   /* Menù di chiusura del periodo: pende dalla fascia 1 (solo Libero) */
@@ -212,9 +217,11 @@
 
   /* ============ Fascia 2: riepilogo ============ */
   /* La carta del riepilogo galleggia sul cielo: solo margine e angoli,
-     niente ombra (il confine è un separatore, non una scatola) */
+     niente ombra (il confine è un separatore, non una scatola). Il margine
+     basso è zero e l'aria che stava qui sotto è passata al corpo: allo
+     scorrere i bordi si toccano davvero (la fusione è raccontata al corpo) */
   .kpi { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; padding: 12px;
-         background: var(--carta); border-radius: 14px; margin: 8px 12px 12px; }
+         background: var(--carta); border-radius: 14px; margin: 8px 12px 0; }
   .kpi2 { grid-template-columns: 1fr 1fr; }
   .kpi .casella { padding: 10px 6px; text-align: center; }
   .kpi .casella .titolo { font-size: 11px; color: var(--neutro); text-transform: uppercase; letter-spacing: .5px; }
@@ -222,8 +229,28 @@
   .verde { color: var(--verde); } .rosso { color: var(--rosso); } .neutro { color: var(--neutro); }
 
   /* ============ Corpo principale ============ */
+  /* L'aria tra la fascia fissa e il corpo (12px) sta qui, fuori dalla
+     fascia: così il contatto avviene sempre dopo 12px di scroll, uguale
+     su ogni pagina, perché la fascia sta attaccata in cima alla pagina */
+  .pagina-corpo { margin-top: 12px; }
   .corpo { padding: 4px 12px 12px;
            background: var(--carta); border-radius: 14px; margin: 0 12px 16px; }
+  /* LA FUSIONE (richiesta di Daniele, 8 nov 2026: angoli tondi a riposo,
+     retti solo quando serve fondersi, una piccola animazione a connettere
+     le due soluzioni): gli angoli della giunzione si affilano con lo
+     scorrere, in un'animazione che ubbidisce alla POSIZIONE dello scroll,
+     non al tempo — retti giusto quando le due carte si toccano (a 12px:
+     l'aria che si chiude), e di nuovo tondi se si torna su. Il range è
+     appeso a quell'aria: se il margine di sopra cambia, cambia anche lui.
+     I browser che non sanno leggere la timeline dello scroll
+     (animation-timeline, Chrome 115+) ignorano l'animazione, che a durata
+     zero li lascia comunque con la giunzione RETTA: la fusione senza
+     il vezzo */
+  @keyframes riepilogo-si-fonde { to { border-radius: 14px 14px 0 0; } }
+  @keyframes corpo-si-fonde { to { border-radius: 0 0 14px 14px; } }
+  .kpi, .corpo { animation-timeline: scroll(root); animation-fill-mode: both; }
+  .kpi { animation-name: riepilogo-si-fonde; animation-range-start: 4px; animation-range-end: 12px; }
+  .corpo { animation-name: corpo-si-fonde; animation-range-start: 4px; animation-range-end: 12px; }
   .giorno {
     font-size: 12px; font-weight: 700; color: var(--neutro);
     text-transform: uppercase; letter-spacing: .5px; margin: 20px 2px 6px;
@@ -256,10 +283,12 @@
      l'unica aria rimasta è la zona sicura, che coi tre tasti del telefono
      di Daniele è zero (la barra del sistema è fuori dallo schermo dell'app,
      la dipinge Chrome col colore del manifest) e coi gesti resta a
-     proteggere la barretta */
+     proteggere la barretta. Di lato si allinea ai margini dell'area di
+     lavoro, come le carte: 12px per parte (richiesta di Daniele, 8 nov
+     2026), e il tetto dei 480 cala della stessa misura, a 456 */
   .nav-basso {
     position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
-    width: 100%; max-width: 480px;
+    width: calc(100% - 24px); max-width: 456px;
     display: grid; grid-template-columns: 1fr 1fr 1fr 1fr;
     background: var(--sfondo);
     padding: 0 0 env(safe-area-inset-bottom, 0px); z-index: 10;
@@ -1216,7 +1245,7 @@ function render() {
     <div class="nav-basso">
       <button class="${visibile === "movimenti" ? "attivo" : ""}" onclick="vai('movimenti')"><span class="icona">${icona("barre")}</span>Movimenti</button>
       <button class="${visibile === "analisi" ? "attivo" : ""}" onclick="vai('analisi')"><span class="icona">${icona("torta")}</span>Analisi</button>
-      <button class="${visibile === "budget" ? "attivo" : ""}" onclick="vai('budget')"><span class="icona">${icona("bersaglio")}</span>Budgets</button>
+      <button class="${visibile === "budget" ? "attivo" : ""}" onclick="vai('budget')"><span class="icona">${icona("bersaglio")}</span>Budget</button>
       <button class="piu" onclick="apriInserimento()"><span class="icona">＋</span></button>
     </div>
     ${stato._locale ? `<div class="tappeto-menu sopra" onclick="chiudiMenuLocale()"></div>
@@ -1746,7 +1775,7 @@ function renderBudget() {
       .filter(x => x.euro > 0);
     // Barra a segmenti: un pezzo per categoria, largo come la sua parte del
     // limite. Il colore NON è quello della torta di Analisi: i segmenti
-    // seguono la scala di blu della palette (Blu notte) per posizione, e
+    // seguono la scala di blu della palette (Blu bruma) per posizione, e
     // oltre la quarta tinta si ricomincia (possono ripetersi: qui l'unicità
     // non serve). Se sforato i pezzi si stringono per stare nel 100% della
     // barra, che è sempre e comunque il limite (e diventano rossi: il CSS
