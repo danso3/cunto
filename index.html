@@ -253,14 +253,21 @@
      della giunzione restano RETTI (il «from» dei keyframe: il senso è
      inverso rispetto alle giunzioni in cima) e si arrotondano solo nei
      16px dopo che il bordo del corpo si è staccato risalendo. Ogni
-     keyframe tocca SOLO i suoi angoli, in longhand. I browser che non
+     keyframe tocca SOLO i suoi angoli, in longhand. IL PADRE CHE
+     STRINGE (10 nov 2026, seconda passata: Daniele vedeva ancora un
+     interspazio tra l'ultimo movimento e la fascia a fine corsa): il
+     «from» di fusione-fondo-basso porta anche padding-bottom: 4px, così
+     negli ultimi 16px di avvicinamento l'aria sotto al contenuto scende
+     da 12 a 4px e a contatto vale 4+13 = 17px, la stessa della giunzione
+     in cima; le pagine corte (mai a contatto) tengono il riposo a 12px.
+     I browser che non
      leggono le timeline ignorano l'animazione, che a durata zero li
      lascia con gli angoli TONDI: la carta isolata, senza la fusione */
   @keyframes riepilogo-si-fonde { to { border-bottom-left-radius: 0; border-bottom-right-radius: 0; } }
   @keyframes corpo-cima-si-fonde { to { border-top-left-radius: 0; border-top-right-radius: 0; } }
   @keyframes corpo-fondo-si-fonde { to { border-bottom-left-radius: 0; border-bottom-right-radius: 0; } }
   @keyframes fusione-fondo-cima { from { border-top-left-radius: 0; border-top-right-radius: 0; } }
-  @keyframes fusione-fondo-basso { from { border-bottom-left-radius: 0; border-bottom-right-radius: 0; } }
+  @keyframes fusione-fondo-basso { from { border-bottom-left-radius: 0; border-bottom-right-radius: 0; padding-bottom: 4px; } }
   #app { timeline-scope: --incontro-fascia; }
   .sentinella-fusione { height: 0; view-timeline: --incontro-fascia block;
                         view-timeline-inset: auto calc(40px + env(safe-area-inset-bottom, 0px)); }
@@ -318,8 +325,19 @@
      degli angoli; il plinto lo Assorbe: tutto ciò che entra nel rettangolo
      della barra sparisce al bordo alto, dritto, e non riappare mai.
      I piastrelli sono QUADRI (Daniele, 10 nov 2026: il confine tra tasto
-     e tasto deve restare una linea retta e definita): solo i due tasti di
-     testa e coda portano gli angoli della carta, sul lato esterno. E
+     e tasto deve restare una linea retta e definita) e RIENTRATI di 14px
+     (seconda passata dello stesso giorno: il margine d'aria dei tasti
+     eguaglia quello del contenuto che scorre, 26px = 12 della carta più
+     12 interni più 2 delle righe: dove finisce il testo delle righe
+     continua il bordo del tasto, sulla stessa linea verticale). Ma il
+     COLORE dei due tasti di testa e coda arriva fino al bordo della
+     carta (terza passata, dallo screenshot di Daniele: ai margini di
+     Movimenti e ＋ restava una zona bianca): margine negativo più padding
+     compensato, il piastrello sborda fino ai bordi e il contenuto resta
+     nella sua colonna; l'arco esterno del piastrello è concentrico a
+     quello del velo. Gli angoli della carta sono del velo, TUTTI E
+     QUATTRO: quelli in fondo non si muovono mai (Daniele: sono l'estetica
+     della carta che tocca il pavimento). E
      come le carte in cima, FONDE col materiale che la incontra (v.
      blocco LA FUSIONE): finché il corpo tocca la barra o le passa dietro
      gli angoli alti della giunzione restano retti, velo e tasti di testa
@@ -332,7 +350,9 @@
     position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
     width: calc(100% - 24px); max-width: 456px;
     display: grid; grid-template-columns: 1fr 1fr 1fr 1fr;
-    padding: 0 0 env(safe-area-inset-bottom, 0px); z-index: 10;
+    /* 14px ai lati: i tasti si allineano alla colonna del contenuto
+       (12 della carta + 12 interni della pagina + 2 delle righe = 26px) */
+    padding: 0 14px env(safe-area-inset-bottom, 0px); z-index: 10;
   }
   .nav-basso::after {
     content: ""; position: absolute; inset: 0; z-index: -2;
@@ -348,10 +368,14 @@
     color: var(--neutro); height: 56px; padding: 0;
     transition: background .1s;
   }
-  /* Angoli della carta solo sui tasti di testa e coda, lato esterno:
-     dentro la barra i confini tra tasto e tasto restano retti */
-  .nav-basso button:first-child { border-radius: 14px 0 0 14px; }
-  .nav-basso button:last-child { border-radius: 0 14px 14px 0; }
+  /* I due tasti di testa e coda: il COLORE arriva fino al bordo della
+     carta (Daniele, 10 nov, dallo screenshot: ai margini di Movimenti e
+     ＋ si vedeva una zona bianca): margine negativo e padding compensato,
+     il piastrello sborda sui bordi e il contenuto resta nella sua
+     colonna; l'arco esterno del piastrello è concentrico a quello del
+     velo. Dentro la barra i confini tra tasto e tasto restano retti */
+  .nav-basso button:first-child { margin-left: -14px; padding-left: 14px; border-radius: 14px 0 0 14px; }
+  .nav-basso button:last-child { margin-right: -14px; padding-right: 14px; border-radius: 0 14px 14px 0; }
   .nav-basso button.attivo { background: var(--tenue); color: var(--accento); font-weight: 700; }
   .nav-basso button .icona { font-size: 22px; line-height: 1; }
   /* Il ＋ è l'ultimo elemento della barra, piatto come gli altri: fondo
