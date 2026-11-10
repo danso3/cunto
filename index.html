@@ -13,7 +13,7 @@
      deploy vero da Daniele, 26 ott 2026). data: copre il favicon -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; manifest-src 'self'; worker-src 'self'">
 <!-- Favicon: il disegno di Daniele — il registro con la moneta €, come l'icona dell'app -->
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect x='0' y='0' width='512' height='512' fill='%232b5f9e'/><rect x='152' y='152' width='204' height='236' rx='20' fill='none' stroke='%23ffffff' stroke-width='14'/><line x1='192' y1='159' x2='192' y2='381' stroke='%23ffffff' stroke-width='14' stroke-linecap='round'/><line x1='216' y1='214' x2='320' y2='214' stroke='%23ffffff' stroke-width='12' stroke-linecap='round'/><line x1='216' y1='262' x2='320' y2='262' stroke='%23ffffff' stroke-width='12' stroke-linecap='round'/><line x1='216' y1='310' x2='320' y2='310' stroke='%23ffffff' stroke-width='12' stroke-linecap='round'/><line x1='216' y1='358' x2='276' y2='358' stroke='%23ffffff' stroke-width='12' stroke-linecap='round'/><circle cx='352' cy='176' r='58' fill='%230f141a' stroke='%23ffffff' stroke-width='13'/><line x1='352' y1='148' x2='352' y2='204' stroke='%23ffffff' stroke-width='10' stroke-linecap='round'/><line x1='343' y1='157' x2='361' y2='157' stroke='%23ffffff' stroke-width='9' stroke-linecap='round'/><line x1='343' y1='185' x2='361' y2='185' stroke='%23ffffff' stroke-width='9' stroke-linecap='round'/></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect x='0' y='0' width='512' height='512' fill='%234f5f70'/><rect x='152' y='152' width='204' height='236' rx='20' fill='none' stroke='%23ffffff' stroke-width='14'/><line x1='192' y1='159' x2='192' y2='381' stroke='%23ffffff' stroke-width='14' stroke-linecap='round'/><line x1='216' y1='214' x2='320' y2='214' stroke='%23ffffff' stroke-width='12' stroke-linecap='round'/><line x1='216' y1='262' x2='320' y2='262' stroke='%23ffffff' stroke-width='12' stroke-linecap='round'/><line x1='216' y1='310' x2='320' y2='310' stroke='%23ffffff' stroke-width='12' stroke-linecap='round'/><line x1='216' y1='358' x2='276' y2='358' stroke='%23ffffff' stroke-width='12' stroke-linecap='round'/><circle cx='352' cy='176' r='58' fill='%23f2c14e' stroke='%23ffffff' stroke-width='13'/><line x1='352' y1='148' x2='352' y2='204' stroke='%231b2631' stroke-width='10' stroke-linecap='round'/><line x1='343' y1='157' x2='361' y2='157' stroke='%231b2631' stroke-width='9' stroke-linecap='round'/><line x1='343' y1='185' x2='361' y2='185' stroke='%231b2631' stroke-width='9' stroke-linecap='round'/></svg>">
 <!-- Il pacchetto PWA: dichiarato quando l'app è pubblicata su un sito.
      In anteprima o da file locale i file non ci sono e non succede nulla -->
 <link rel="manifest" href="manifest.webmanifest">
@@ -41,7 +41,6 @@
        direttamente sul #4f5f70, uguali nei due temi */
     --cromo-testo: #e9eef4;
     --cromo-accento: #a4c8ee;
-    --cromo-spento: #b9c7d6;
     --cromo-filo: rgba(233, 238, 244, .28);
     /* Slot colore delle categorie nella torta: uno per riga, assegnato alla
        nascita di ogni categoria e mai più cambiato, così i colori restano
@@ -94,12 +93,13 @@
      overflow-x: clip — il contenuto che entra da destra sfora di 46px per un attimo:
      senza il clip la pagina diventerebbe scrollabile di lato e la fascia fissa in
      basso (fascia 4) sparirebbe e riapparirebbe a ogni entrata da destra.
-     padding-bottom: la barra fissa è alta 44px (i pulsanti soli: la fascia
-     li abbraccia esatti e sta addossata alla barra del telefono, voluto
-     da Daniele nel giro 20) più la zona sicura quando c'è; sopra 14px
-     di respiro */
+     padding-bottom: la barra in basso è alta 56px e TOCCA il fondo del
+     telaio come la vecchia striscia (la zona sicura sta dentro la barra,
+     v. .nav-basso); il corpo la tocca a fine corsa col suo margine basso
+     (16px): 40 = 56 − 16, così la fusione dei due si completa giusto
+     quando lo scroll è arrivato in fondo */
   #app { max-width: 480px; margin: 0 auto; min-height: 100vh;
-         padding-bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+         padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px));
          touch-action: manipulation; overflow-x: clip; }
   /* Foglio "nuovo movimento": sale dal basso sopra la pagina precedente */
   .sheet {
@@ -237,20 +237,47 @@
            background: var(--carta); border-radius: 14px; margin: 0 12px 16px; }
   /* LA FUSIONE (richiesta di Daniele, 8 nov 2026: angoli tondi a riposo,
      retti solo quando serve fondersi, una piccola animazione a connettere
-     le due soluzioni): gli angoli della giunzione si affilano con lo
-     scorrere, in un'animazione che ubbidisce alla POSIZIONE dello scroll,
-     non al tempo — retti giusto quando le due carte si toccano (a 12px:
-     l'aria che si chiude), e di nuovo tondi se si torna su. Il range è
-     appeso a quell'aria: se il margine di sopra cambia, cambia anche lui.
-     I browser che non sanno leggere la timeline dello scroll
-     (animation-timeline, Chrome 115+) ignorano l'animazione, che a durata
-     zero li lascia comunque con la giunzione RETTA: la fusione senza
-     il vezzo */
-  @keyframes riepilogo-si-fonde { to { border-radius: 14px 14px 0 0; } }
-  @keyframes corpo-si-fonde { to { border-radius: 0 0 14px 14px; } }
-  .kpi, .corpo { animation-timeline: scroll(root); animation-fill-mode: both; }
-  .kpi { animation-name: riepilogo-si-fonde; animation-range-start: 4px; animation-range-end: 12px; }
-  .corpo { animation-name: corpo-si-fonde; animation-range-start: 4px; animation-range-end: 12px; }
+     le due soluzioni). In cima il riepilogo fonde col corpo: l'aria è il
+     margine di 12px del corpo, si chiude nei primi 12px di scroll, e qui
+     basta la posizione dello scroll (animation-timeline: scroll(root)).
+     In fondo (RIVISTA il 10 nov 2026: prima la fusione era appesa alla
+     FINE della corsa dello scroll, ma su telefono l'ultima parte di corsa
+     è falsata dalla barra degli URL che si nasconde e dalle pagine corte,
+     così gli angoli si affilavano col materiale ancora staccato: «al
+     contrario», Daniele) ora conta il CONTATTO VERO. Una sentinella
+     invisibile (.sentinella-fusione, altezza zero, sta subito dopo il
+     corpo) porta una view-timeline il cui scrollport è accorciato in
+     fondo di 40px più la zona sicura: il punto zero della timeline è
+     così l'attimo esatto in cui il bordo del corpo tocca la carta della
+     barra. Finché il materiale tocca o è dietro (assorbito) gli angoli
+     della giunzione restano RETTI (il «from» dei keyframe: il senso è
+     inverso rispetto alle giunzioni in cima) e si arrotondano solo nei
+     16px dopo che il bordo del corpo si è staccato risalendo. Ogni
+     keyframe tocca SOLO i suoi angoli, in longhand. I browser che non
+     leggono le timeline ignorano l'animazione, che a durata zero li
+     lascia con gli angoli TONDI: la carta isolata, senza la fusione */
+  @keyframes riepilogo-si-fonde { to { border-bottom-left-radius: 0; border-bottom-right-radius: 0; } }
+  @keyframes corpo-cima-si-fonde { to { border-top-left-radius: 0; border-top-right-radius: 0; } }
+  @keyframes corpo-fondo-si-fonde { to { border-bottom-left-radius: 0; border-bottom-right-radius: 0; } }
+  @keyframes fusione-fondo-cima { from { border-top-left-radius: 0; border-top-right-radius: 0; } }
+  @keyframes fusione-fondo-basso { from { border-bottom-left-radius: 0; border-bottom-right-radius: 0; } }
+  #app { timeline-scope: --incontro-fascia; }
+  .sentinella-fusione { height: 0; view-timeline: --incontro-fascia block;
+                        view-timeline-inset: auto calc(40px + env(safe-area-inset-bottom, 0px)); }
+  .kpi { animation-name: riepilogo-si-fonde; animation-timeline: scroll(root);
+         animation-fill-mode: both; animation-range: 4px 12px; }
+  .corpo { animation-name: corpo-cima-si-fonde, fusione-fondo-basso;
+           animation-timeline: scroll(root), --incontro-fascia;
+           animation-fill-mode: both;
+           animation-range: 4px 12px, cover 0px cover 16px; }
+  /* la pagina Modifica periodi è una carta a sé (stesso margine basso di
+     16px): fonde solo in fondo; in cima galleggia */
+  #app > .pag-impostazioni { animation-name: corpo-fondo-si-fonde;
+                             animation-timeline: scroll(root);
+                             animation-range-start: calc(100% - 16px); animation-range-end: 100%; }
+  .nav-basso::before, .nav-basso button:first-child, .nav-basso button:last-child {
+    animation-name: fusione-fondo-cima; animation-timeline: --incontro-fascia;
+    animation-fill-mode: both; animation-range: cover 0px cover 16px; }
   .giorno {
     font-size: 12px; font-weight: 700; color: var(--neutro);
     text-transform: uppercase; letter-spacing: .5px; margin: 20px 2px 6px;
@@ -278,28 +305,55 @@
   .vuoto { text-align: center; color: var(--neutro); padding: 40px 20px; font-size: 14px; }
 
   /* ============ Fascia 4: menu inferiore ============ */
-  /* La fascia abbraccia ESATTI i pulsanti (44px, niente spazio sopra né
-     sotto) e sta addossata al punto più basso che il sistema concede:
-     l'unica aria rimasta è la zona sicura, che coi tre tasti del telefono
-     di Daniele è zero (la barra del sistema è fuori dallo schermo dell'app,
-     la dipinge Chrome col colore del manifest) e coi gesti resta a
-     proteggere la barretta. Di lato si allinea ai margini dell'area di
-     lavoro, come le carte: 12px per parte (richiesta di Daniele, 8 nov
-     2026), e il tetto dei 480 cala della stessa misura, a 456 */
+  /* La barra è una CARTA ISOLATA come il riepilogo (richiesta di Daniele,
+     10 nov 2026) ma TOCCA IL FONDO del telaio, come la vecchia striscia
+     (stesso giorno, Daniele: niente spazio sotto): la zona sicura sta
+     DENTRO la barra e coi gesti protegge la barretta. I pulsanti sono
+     alti 56px PER COSTRUZIONE (la vecchia striscia era ~53px ma
+     dipendeva dal font: qui l'altezza è fissa, così il contatto a fine
+     corsa è esatto). La carta è un VELO (::before, angoli 14px come le
+     altre carte, niente ombra) e sotto di lui sta il PLINTO (::after,
+     quadrato, colore del cielo): una carta smussata è trasparente fuori
+     dall'arco, quindi ciò che scorre dietro si vedrebbe nelle orecchie
+     degli angoli; il plinto lo Assorbe: tutto ciò che entra nel rettangolo
+     della barra sparisce al bordo alto, dritto, e non riappare mai.
+     I piastrelli sono QUADRI (Daniele, 10 nov 2026: il confine tra tasto
+     e tasto deve restare una linea retta e definita): solo i due tasti di
+     testa e coda portano gli angoli della carta, sul lato esterno. E
+     come le carte in cima, FONDE col materiale che la incontra (v.
+     blocco LA FUSIONE): finché il corpo tocca la barra o le passa dietro
+     gli angoli alti della giunzione restano retti, velo e tasti di testa
+     e coda insieme, e si arrotondano solo quando il bordo del corpo si
+     stacca risalendo. Sull'8 nov 2026 tre
+     vestiti (margini ai lati, capsule, cerchi col fumetto) erano stati
+     provati e bocciati; del giro resta anche l'icona di Movimenti
+     (i-hand-coins) */
   .nav-basso {
     position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
     width: calc(100% - 24px); max-width: 456px;
     display: grid; grid-template-columns: 1fr 1fr 1fr 1fr;
-    background: var(--sfondo);
     padding: 0 0 env(safe-area-inset-bottom, 0px); z-index: 10;
+  }
+  .nav-basso::after {
+    content: ""; position: absolute; inset: 0; z-index: -2;
+    background: var(--sfondo);
+  }
+  .nav-basso::before {
+    content: ""; position: absolute; inset: 0; z-index: -1;
+    background: var(--carta); border-radius: 14px;
   }
   .nav-basso button {
     background: none; border: none; display: flex; flex-direction: column;
     align-items: center; justify-content: center; gap: 2px; font-size: 11px;
-    color: var(--cromo-spento); padding: 6px 0; min-height: 44px; transition: background .1s;
+    color: var(--neutro); height: 56px; padding: 0;
+    transition: background .1s;
   }
+  /* Angoli della carta solo sui tasti di testa e coda, lato esterno:
+     dentro la barra i confini tra tasto e tasto restano retti */
+  .nav-basso button:first-child { border-radius: 14px 0 0 14px; }
+  .nav-basso button:last-child { border-radius: 0 14px 14px 0; }
   .nav-basso button.attivo { background: var(--tenue); color: var(--accento); font-weight: 700; }
-  .nav-basso button .icona { font-size: 22px; }
+  .nav-basso button .icona { font-size: 22px; line-height: 1; }
   /* Il ＋ è l'ultimo elemento della barra, piatto come gli altri: fondo
      tenue e segno blu, niente cerchio */
   .nav-basso button.piu { background: var(--tenue); }
@@ -764,6 +818,7 @@
 <symbol id="i-gatto" viewBox="0 0 24 24"><path d="M12 5c.67 0 1.35.09 2 .26c1.78-2 5.03-2.84 6.42-2.26c1.4.58-.42 7-.42 7c.57 1.07 1 2.24 1 3.44C21 17.9 16.97 21 12 21s-9-3-9-7.56c0-1.25.5-2.4 1-3.44c0 0-1.89-6.42-.5-7s4.72.23 6.5 2.23A9 9 0 0 1 12 5m-4 9v.5m8-.5v.5" /> <path d="M11.25 16.25h1.5L12 17z" /></symbol>
 <symbol id="i-gelato" viewBox="0 0 24 24"><path d="m7 11l4.08 10.35a1 1 0 0 0 1.84 0L17 11m0-4A5 5 0 0 0 7 7m10 0a2 2 0 0 1 0 4H7a2 2 0 0 1 0-4" /></symbol>
 <symbol id="i-giornale" viewBox="0 0 24 24"><path d="M15 18h-5m8-4h-8m-6 8h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2" /> <rect x="10" y="6" width="8" height="4" rx="1" /></symbol>
+<symbol id="i-hand-coins" viewBox="0 0 24 24"><path d="M11 15h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 17" /> <path d="m7 21l1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9M2 16l6 6" /> <circle cx="16" cy="9" r="2.9" /> <circle cx="6" cy="5" r="3" /></symbol>
 <symbol id="i-insalata" viewBox="0 0 24 24"><path d="M7 21h10m-5 0a9 9 0 0 0 9-9H3a9 9 0 0 0 9 9" /> <path d="M11.38 12a2.4 2.4 0 0 1-.4-4.77a2.4 2.4 0 0 1 3.2-2.77a2.4 2.4 0 0 1 3.47-.63a2.4 2.4 0 0 1 3.37 3.37a2.4 2.4 0 0 1-1.1 3.7a2.5 2.5 0 0 1 .03 1.1M13 12l4-4" /> <path d="M10.9 7.25A3.99 3.99 0 0 0 4 10c0 .73.2 1.41.54 2" /></symbol>
 <symbol id="i-laurea" viewBox="0 0 24 24"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0zM22 10v6" /> <path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5" /></symbol>
 <symbol id="i-letto" viewBox="0 0 24 24"><path d="M2 4v16M2 8h18a2 2 0 0 1 2 2v10M2 17h20M6 8v9" /></symbol>
@@ -828,7 +883,7 @@ const GIORNI = ["domenica","lunedì","martedì","mercoledì","giovedì","venerd�
    emoji dei dati salvati (e dei backup) prima del restyle */
 const ICONE = ["aggiorna","casa","documento","caffe","pizza","persone","libro","auto","posate",
                "utente","salute","spesa","gioco","tasse","telefono","bus","aereo","emergenza",
-               "maglietta","regalo","lavoro","banca","banconote","lampadina","carta","bersaglio",
+               "maglietta","regalo","lavoro","banca","banconote","hand-coins","lampadina","carta","bersaglio",
                "busta","folgore","mondo","chiave","cuore","pin","pesi","film","trofeo","ricevuta",
                "portafoglio","domanda","etichetta","calendario","scarica","carica","provetta",
                "spazzatura","piu","matita","barre","torta",
@@ -1241,9 +1296,10 @@ function render() {
     ${pagina.kpi}
     </div>
     <div class="pagina-corpo${dir ? " " + dir : ""}">${pagina.corpo}</div>
+    <div class="sentinella-fusione"></div>
     ${foglio}
     <div class="nav-basso">
-      <button class="${visibile === "movimenti" ? "attivo" : ""}" onclick="vai('movimenti')"><span class="icona">${icona("barre")}</span>Movimenti</button>
+      <button class="${visibile === "movimenti" ? "attivo" : ""}" onclick="vai('movimenti')"><span class="icona">${icona("hand-coins")}</span>Movimenti</button>
       <button class="${visibile === "analisi" ? "attivo" : ""}" onclick="vai('analisi')"><span class="icona">${icona("torta")}</span>Analisi</button>
       <button class="${visibile === "budget" ? "attivo" : ""}" onclick="vai('budget')"><span class="icona">${icona("bersaglio")}</span>Budget</button>
       <button class="piu" onclick="apriInserimento()"><span class="icona">＋</span></button>
