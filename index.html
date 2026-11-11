@@ -347,8 +347,14 @@
      provati e bocciati; del giro resta anche l'icona di Movimenti
      (i-hand-coins) */
   .nav-basso {
-    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
-    width: calc(100% - 24px); max-width: 456px;
+    /* Centrata come #app e il foglio (margini automatici), NIENTE transform:
+       la vecchia left:50% + translateX(-50%) faceva della barra un layer
+       a parte per il rendering, e sullo schermo denso del telefono i suoi
+       bordi venivano tagliati a un pixel di distanza da quelli delle carte
+       in flusso: lembi chiari agli angoli e disallineamenti che al
+       computer non si vedevano (Daniele, 10 nov, due screenshot) */
+    position: fixed; bottom: 0; left: 12px; right: 12px;
+    max-width: 456px; margin: 0 auto;
     display: grid; grid-template-columns: 1fr 1fr 1fr 1fr;
     /* 14px ai lati: i tasti si allineano alla colonna del contenuto
        (12 della carta + 12 interni della pagina + 2 delle righe = 26px) */
