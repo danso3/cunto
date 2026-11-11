@@ -93,13 +93,13 @@
      overflow-x: clip — il contenuto che entra da destra sfora di 46px per un attimo:
      senza il clip la pagina diventerebbe scrollabile di lato e la fascia fissa in
      basso (fascia 4) sparirebbe e riapparirebbe a ogni entrata da destra.
-     padding-bottom: la barra in basso è alta 56px e TOCCA il fondo del
+     padding-bottom: la barra in basso è alta 64px e TOCCA il fondo del
      telaio come la vecchia striscia (la zona sicura sta dentro la barra,
      v. .nav-basso); il corpo la tocca a fine corsa col suo margine basso
-     (16px): 40 = 56 − 16, così la fusione dei due si completa giusto
+     (16px): 48 = 64 − 16, così la fusione dei due si completa giusto
      quando lo scroll è arrivato in fondo */
   #app { max-width: 480px; margin: 0 auto; min-height: 100vh;
-         padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px));
+         padding-bottom: calc(48px + env(safe-area-inset-bottom, 0px));
          touch-action: manipulation; overflow-x: clip; }
   /* Foglio "nuovo movimento": sale dal basso sopra la pagina precedente */
   .sheet {
@@ -247,7 +247,7 @@
      contrario», Daniele) ora conta il CONTATTO VERO. Una sentinella
      invisibile (.sentinella-fusione, altezza zero, sta subito dopo il
      corpo) porta una view-timeline il cui scrollport è accorciato in
-     fondo di 40px più la zona sicura: il punto zero della timeline è
+     fondo di 48px più la zona sicura: il punto zero della timeline è
      così l'attimo esatto in cui il bordo del corpo tocca la carta della
      barra. Finché il materiale tocca o è dietro (assorbito) gli angoli
      della giunzione restano RETTI (il «from» dei keyframe: il senso è
@@ -266,11 +266,18 @@
   @keyframes riepilogo-si-fonde { to { border-bottom-left-radius: 0; border-bottom-right-radius: 0; } }
   @keyframes corpo-cima-si-fonde { to { border-top-left-radius: 0; border-top-right-radius: 0; } }
   @keyframes corpo-fondo-si-fonde { to { border-bottom-left-radius: 0; border-bottom-right-radius: 0; } }
-  @keyframes fusione-fondo-cima { from { border-top-left-radius: 0; border-top-right-radius: 0; } }
+  /* A contatto il velo si allunga di 2px in su (top nei keyframe: vale solo
+     per lui, i tasti non sono posizionati e la ignorano): bordo del corpo e
+     cima della barra coincidono per costruzione, ma sullo schermo denso del
+     telefono l'arrotondamento ai subpixel lasciava filtrare un filo di cielo
+     nella giunzione (Daniele, 11 nov 2026, screenshot). I 2px di carta in più
+     coprono il filo: invisibili, le due carte sono dello stesso colore. Risalendo,
+     nei 16px di distacco, il velo torna al suo posto */
+  @keyframes fusione-fondo-cima { from { border-top-left-radius: 0; border-top-right-radius: 0; top: -2px; } }
   @keyframes fusione-fondo-basso { from { border-bottom-left-radius: 0; border-bottom-right-radius: 0; padding-bottom: 4px; } }
   #app { timeline-scope: --incontro-fascia; }
   .sentinella-fusione { height: 0; view-timeline: --incontro-fascia block;
-                        view-timeline-inset: auto calc(40px + env(safe-area-inset-bottom, 0px)); }
+                        view-timeline-inset: auto calc(48px + env(safe-area-inset-bottom, 0px)); }
   .kpi { animation-name: riepilogo-si-fonde; animation-timeline: scroll(root);
          animation-fill-mode: both; animation-range: 4px 12px; }
   .corpo { animation-name: corpo-cima-si-fonde, fusione-fondo-basso;
@@ -316,8 +323,9 @@
      10 nov 2026) ma TOCCA IL FONDO del telaio, come la vecchia striscia
      (stesso giorno, Daniele: niente spazio sotto): la zona sicura sta
      DENTRO la barra e coi gesti protegge la barretta. I pulsanti sono
-     alti 56px PER COSTRUZIONE (la vecchia striscia era ~53px ma
-     dipendeva dal font: qui l'altezza è fissa, così il contatto a fine
+     alti 64px PER COSTRUZIONE (56 su richiesta di Daniele, 11 nov 2026:
+     «leggermente più alta», tasti un po' più grandi; la vecchia striscia era
+     ~53px ma dipendeva dal font: qui l'altezza è fissa, così il contatto a fine
      corsa è esatto). La carta è un VELO (::before, angoli 14px come le
      altre carte, niente ombra) e sotto di lui sta il PLINTO (::after,
      quadrato, colore del cielo): una carta smussata è trasparente fuori
@@ -355,13 +363,28 @@
        computer non si vedevano (Daniele, 10 nov, due screenshot) */
     position: fixed; bottom: 0; left: 12px; right: 12px;
     max-width: 456px; margin: 0 auto;
-    display: grid; grid-template-columns: 1fr 1fr 1fr 1fr;
+    display: grid;
+    /* Larghezze tarate per la RESA VISIVA (Daniele, 11 nov 2026): i tasti di
+       testa e coda sbordano di 14px sulla carta (margine negativo, colore fino
+       al bordo con l'angolo smussato), quindi il loro rettangolo visibile è più
+       largo. Le colonne esterne sono strette di 7px e le interne larghe
+       altrettanto: tasto esterno + sbordo = tasto interno, tutti e quattro
+       appaiono identici. (Primo tentativo con calc(1fr - 14px) caduto: fr
+       dentro calc non è CSS valido; le percentuali in calc, qui, lo sono) */
+    grid-template-columns: calc(25% - 7px) calc(25% + 7px) calc(25% + 7px) calc(25% - 7px);
     /* 14px ai lati: i tasti si allineano alla colonna del contenuto
        (12 della carta + 12 interni della pagina + 2 delle righe = 26px) */
     padding: 0 14px env(safe-area-inset-bottom, 0px); z-index: 10;
   }
+  /* Il plinto corre su TUTTA la larghezza dello schermo, non solo quella
+     della barra (Daniele, 11 nov 2026: durante il cambio sezione l'animazione
+     traspariva nelle due fasce di cielo ai lati della barra): sotto la linea
+     immaginaria della cima della barra, a tutto schermo, non si vede nulla
+     di ciò che scorre o si anima. A riposo le fasce laterali sono cielo
+     comunque, quindi nulla cambia a vista */
   .nav-basso::after {
-    content: ""; position: absolute; inset: 0; z-index: -2;
+    content: ""; position: absolute; top: 0; bottom: 0;
+    left: calc(50% - 50vw); right: calc(50% - 50vw); z-index: -2;
     background: var(--sfondo);
   }
   .nav-basso::before {
@@ -371,7 +394,7 @@
   .nav-basso button {
     background: none; border: none; display: flex; flex-direction: column;
     align-items: center; justify-content: center; gap: 2px; font-size: 11px;
-    color: var(--neutro); height: 56px; padding: 0;
+    color: var(--neutro); height: 64px; padding: 0;
     transition: background .1s;
   }
   /* I due tasti di testa e coda: il COLORE arriva fino al bordo della
