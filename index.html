@@ -399,18 +399,90 @@
   }
   /* I due tasti di testa e coda: il COLORE arriva fino al bordo della
      carta (Daniele, 10 nov, dallo screenshot: ai margini di Movimenti e
-     ＋ si vedeva una zona bianca): margine negativo e padding compensato,
-     il piastrello sborda sui bordi e il contenuto resta nella sua
-     colonna; l'arco esterno del piastrello è concentrico a quello del
-     velo. Dentro la barra i confini tra tasto e tasto restano retti */
-  .nav-basso button:first-child { margin-left: -14px; padding-left: 14px; border-radius: 14px 0 0 14px; }
-  .nav-basso button:last-child { margin-right: -14px; padding-right: 14px; border-radius: 0 14px 14px 0; }
+     ＋ si vedeva una zona bianca): margine negativo, il piastrello sborda
+     sui bordi; l'arco esterno del piastrello è concentrico a quello del
+     velo. Dentro la barra i confini tra tasto e tasto restano retti.
+     NIENTE padding compensato (tolto l'11 nov 2026, Daniele): col contenuto
+     riportato in colonna, icona e scritta risultavano spostate di 7px dal
+     centro del loro rettangolo visibile (tasto più sbordo fino alla carta):
+     senza padding il centramento flex le mette esattamente al centro di
+     quell'area intera */
+  .nav-basso button:first-child { margin-left: -14px; border-radius: 14px 0 0 14px; }
+  .nav-basso button:last-child { margin-right: -14px; border-radius: 0 14px 14px 0; }
   .nav-basso button.attivo { background: var(--tenue); color: var(--accento); font-weight: 700; }
   .nav-basso button .icona { font-size: 22px; line-height: 1; }
   /* Il ＋ è l'ultimo elemento della barra, piatto come gli altri: fondo
      tenue e segno blu, niente cerchio */
   .nav-basso button.piu { background: var(--tenue); }
   .nav-basso button.piu .icona { color: var(--accento); font-size: 22px; }
+
+  /* ============ Tasto fluttuante del tracciamento ============ */
+  /* Pende da #app come il menù locale: dentro .pagina-corpo (che anima con
+     translateX al cambio sezione) un position:fixed salterebbe di posto.
+     Stessa geometria della fascia 4 (stessi margini, stessa griglia a 4
+     colonne): il tasto in colonna 4 resta centrato sul ＋ a qualsiasi
+     larghezza di schermo. NIENTE transform per centrare (lezione del
+     10 nov 2026). Vive SOLO in Analisi (nella schermata c'è la freccetta ‹,
+     il tasto non serve più): si vede solo alla sommità della pagina,
+     scorrendo scende e sfuma (isteresi sulla soglia, v. aggiornaTastoTraccia);
+     al cambio sezione non c'è proprio, il render lo crea già nel stato del momento */
+  .tasto-traccia {
+    position: fixed; bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    left: 12px; right: 12px; max-width: 456px; margin: 0 auto;
+    display: grid;
+    grid-template-columns: calc(25% - 7px) calc(25% + 7px) calc(25% + 7px) calc(25% - 7px);
+    padding: 0 14px; z-index: 15; pointer-events: none;
+    transition: transform .18s ease-out, opacity .18s ease-out;
+  }
+  .tasto-traccia.nascosto { transform: translateY(16px); opacity: 0; }
+  .tasto-traccia button {
+    grid-column: 4; justify-self: center; position: relative;
+    pointer-events: auto; width: 52px; height: 52px;
+    border: none; border-radius: 14px; background: var(--tenue); color: var(--accento);
+    display: flex; align-items: center; justify-content: center;
+  }
+  /* Il fumetto del tocco lungo (400ms): la didascalia che dice cosa fa il tasto */
+  .fumetto {
+    position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%);
+    background: var(--testo); color: var(--carta); font-size: 12px; font-weight: 600;
+    padding: 6px 12px; border-radius: 8px; white-space: nowrap;
+    z-index: 60; pointer-events: none; animation: fumetto-entra .15s ease-out;
+  }
+  .fumetto::after {
+    content: ""; position: absolute; top: 100%; left: 50%; transform: translateX(-50%) rotate(45deg);
+    width: 8px; height: 8px; background: var(--testo);
+  }
+  @keyframes fumetto-entra { from { opacity: 0; transform: translate(-50%, 4px); } }
+
+  /* ============ Schermata di tracciamento ============ */
+  /* Il grafico: una linea sola (il saldo), asse x per periodi. Il disegno è
+     largo quanto TUTTI i periodi in una finestra da 12: il pan orizzontale
+     è lo scorrimento nativo (inerzia e blocco d'asse gratis, niente
+     riconoscitori scritti a mano); la posizione si conserva tra i render */
+  .scorrimento-traccia { overflow-x: auto; overflow-y: hidden; }
+  .grafico-traccia { display: block; }
+  .grafico-traccia text { fill: var(--neutro); font-size: 9px; font-weight: 600; }
+  .grafico-traccia polyline { fill: none; stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round; }
+  /* Nella schermata non c'è la fascia fissa in cima: la fusione in alto
+     non ha niente da fondersi, resta solo quella in fondo con la barra.
+     La sentinella del contatto la mette renderTracciamento, come le
+     altre pagine: senza di lei la timeline non esiste e la fusione
+     non parte (gli angoli restano tondi a contatto) */
+  .pagina-traccia .corpo { animation-name: fusione-fondo-basso;
+                           animation-timeline: --incontro-fascia;
+                           animation-range: cover 0px cover 16px; }
+  /* La sintesi per periodo: righe toccabili come quelle di Analisi */
+  .sotto-bilancio { font-size: 12px; color: var(--neutro); margin-top: 2px; }
+  .riga-traccia { display: flex; justify-content: space-between; align-items: baseline;
+                  gap: 8px; padding: 11px 12px; border-bottom: 1px solid var(--bordo); }
+  .riga-traccia .quando { font-size: 14px; font-weight: 600; }
+  .riga-traccia .saldo { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap;
+                         display: flex; align-items: center; gap: 4px; }
+  .riga-traccia .saldo .ico { width: 14px; height: 14px; }
+  .riga-traccia .aggiustato { font-size: 11px; font-weight: 700; color: var(--accento); }
+  /* La tendina del punto di partenza: un campo come gli altri */
+  .campo select { width: 100%; padding: 12px 2px; border: none; border-bottom: 1px solid var(--bordo);
+                  background: none; font-size: 15px; color: var(--testo); }
 
   /* ============ Form movimento ============ */
   .intestazione-pagina {
@@ -437,6 +509,9 @@
   .tastierino button:active { background: color-mix(in srgb, currentColor 8%, transparent); }
   .sezioni-form { padding: 16px 12px; display: flex; flex-direction: column; gap: 14px; }
   .campo .etichetta-campo { font-size: 12px; font-weight: 700; color: var(--neutro); text-transform: uppercase; margin-bottom: 6px; }
+  /* La variante tonda semplice (foglietto dell'aggiustamento): niente
+     maiuscolo, niente grassetto, la parola parla da sola */
+  .etichetta-campo.tonda { text-transform: none; font-weight: 400; font-size: 13.5px; letter-spacing: normal; }
   .toggle-direzione { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .toggle-direzione button {
     padding: 10px; border-radius: 999px; border: none;
@@ -912,6 +987,10 @@
 <symbol id="i-latte" viewBox="0 0 24 24"><path d="M8 2h8M9 2v2.789a4 4 0 0 1-.672 2.219l-.656.984A4 4 0 0 0 7 10.212V20a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-9.789a4 4 0 0 0-.672-2.219l-.656-.984A4 4 0 0 1 15 4.788V2" /><path d="M7 15a6.47 6.47 0 0 1 5 0a6.47 6.47 0 0 0 5 0" /></symbol>
 <symbol id="i-mappa" viewBox="0 0 24 24"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0zm.894.211v15M9 3.236v15" /></symbol>
 <symbol id="i-bussola" viewBox="0 0 24 24"><path d="m16.24 7.76l-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z" /><circle cx="12" cy="12" r="10" /></symbol>
+<symbol id="i-trending-up" viewBox="0 0 24 24"><path d="M16 7h6v6" /> <path d="m22 7l-8.5 8.5l-5-5L2 17" /></symbol>
+<!-- Frecce dei saldi del tracciamento: non stanno nel selettore -->
+<symbol id="i-freccia-su" viewBox="0 0 24 24"><path d="m5 12 7-7 7 7" /><path d="M12 19V5" /></symbol>
+<symbol id="i-freccia-giu" viewBox="0 0 24 24"><path d="M12 5v14" /><path d="m19 12-7 7-7-7" /></symbol>
 <!-- Icona interna del banner di memoria temporanea: non sta nel selettore -->
 <symbol id="i-attenzione" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" /><path d="M12 9v4" /><path d="M12 17h.01" /></symbol>
 </svg>
@@ -947,7 +1026,8 @@ const ICONE = ["aggiorna","casa","documento","caffe","pizza","persone","libro","
                "cane","gatto","pesce","uccello","birra","vino","gelato","dolce","biscotto",
                "panino","insalata","stetoscopio","pillola","microscopio","ancora","chevron-giu",
                "wifi","lavatrice","presa","biglietto","popcorn","cornetto","uovo","latte",
-               "mappa","bussola"];
+               "mappa","bussola","trending-up",
+               "freccia-su","freccia-giu"];   // trending-up: il tasto del tracciamento; le frecce: le righe della sintesi, fuori dal selettore
 const ICONE_RAPIDE = ["casa","spesa","caffe","pizza","auto","telefono","lampadina","maglietta",
                       "libro","regalo","lavoro","salute","gioco","aereo","bus","posate","film",
                       "trofeo","ricevuta","carta","banconote","banca","bersaglio","busta","folgore",
@@ -1004,7 +1084,7 @@ function prom(q) { return new Promise((ris, err) => { q.onsuccess = () => ris(q.
 function apriDB() {
   return new Promise(ris => {
     let r;
-    try { r = indexedDB.open("finanze", 3); }
+    try { r = indexedDB.open("finanze", 4); }
     catch (e) { return ris(null); }
     r.onupgradeneeded = e => {
       const d = e.target.result;
@@ -1016,6 +1096,7 @@ function apriDB() {
       if (!d.objectStoreNames.contains("periodi"))     d.createObjectStore("periodi",     {keyPath: "id", autoIncrement: true});
       if (!d.objectStoreNames.contains("impostazioni")) d.createObjectStore("impostazioni", {keyPath: "chiave"});
       if (!d.objectStoreNames.contains("backup"))      d.createObjectStore("backup",      {keyPath: "id", autoIncrement: true});   // le istantanee automatiche (v3)
+      if (!d.objectStoreNames.contains("tracciamento")) d.createObjectStore("tracciamento", {keyPath: "chiave"});   // il punto di partenza e gli aggiustamenti del conto (v4)
     };
     r.onsuccess = () => ris(r.result);
     r.onerror = () => ris(null);
@@ -1047,12 +1128,12 @@ function sporcoPulito() {
 async function dbSalva(s, obj) {
   if (db) {
     const o = tabella(s, "readwrite");
-    // Le impostazioni usano "chiave" come chiave: il put inserisce o
-    // aggiorna senza mai andare in conflitto con il record esistente
-    if (s === "impostazioni") await prom(o.put(obj));
+    // Impostazioni e tracciamento usano "chiave" come chiave: il put
+    // inserisce o aggiorna senza mai andare in conflitto col record esistente
+    if (s === "impostazioni" || s === "tracciamento") await prom(o.put(obj));
     else if (obj.id == null) obj.id = await prom(o.add(obj));
     else await prom(o.put(obj));
-  } else if (s !== "impostazioni" && obj.id == null) {
+  } else if (s !== "impostazioni" && s !== "tracciamento" && obj.id == null) {
     // Senza IndexedDB: in memoria le impostazioni vivono già in dati
     obj.id = dati._id[s]++;
   }
@@ -1072,6 +1153,7 @@ async function caricaTutto() {
     dati.budget       = await leggi("budget");
     dati.periodi      = await leggi("periodi");
     dati.impostazioni = (await leggi("impostazioni")).find(i => i.chiave === "app") || null;
+    dati.tracciamento = (await leggi("tracciamento")).find(t => t.chiave === "app") || null;
     dati.backup = await leggi("backup");
   }
 }
@@ -1084,6 +1166,7 @@ async function caricaTutto() {
 const dati = {
   movimenti: [], categorie: [], conti: [], budget: [], periodi: [],
   backup: [],   // le istantanee automatiche: al massimo tre, dentro l'app
+  tracciamento: null,   // il punto di partenza e gli aggiustamenti del conto
   impostazioni: null,
   _id: {movimenti: 1, categorie: 1, conti: 1, budget: 1, periodi: 1, backup: 1}   // solo per la modalità senza IndexedDB
 };
@@ -1302,10 +1385,14 @@ let sheetNuovo = false;   // true solo quando il foglio si apre: serve per l'ani
 const speseProgrammate = () => dati.impostazioni.periodoModalita === "libero" && stato.offset === 1;
 
 function render() {
+  stato._fumetto = false;   // il render ricostruisce tutto: il fumetto non sopravvive (vale per ogni pagina)
   if (stato.pagina === "periodi") return renderPeriodi();
-  // Con un foglio aperto (form o Impostazioni), dietro resta la pagina d'origine
+  if (stato.pagina === "tracciamento") return renderTracciamento();
+  // Con un foglio aperto (form o Impostazioni), dietro resta la pagina d'origine.
+  // Dietro alla scheda del movimento non c'è mai la schermata di tracciamento
+  // (che disegna tutta da sé): c'è Analisi, la sua sezione
   const visibile = (stato.pagina === "form" || stato.pagina === "impostazioni")
-    ? stato.dietro : stato.pagina;
+    ? (stato.dietro === "tracciamento" ? "analisi" : stato.dietro) : stato.pagina;
 
   const p = periodo();
   const pagina = visibile === "movimenti" ? renderMovimenti()
@@ -1351,6 +1438,7 @@ function render() {
     <div class="pagina-corpo${dir ? " " + dir : ""}">${pagina.corpo}</div>
     <div class="sentinella-fusione"></div>
     ${foglio}
+    ${tastoTracciaHtml()}
     <div class="nav-basso">
       <button class="${visibile === "movimenti" ? "attivo" : ""}" onclick="vai('movimenti')"><span class="icona">${icona("hand-coins")}</span>Movimenti</button>
       <button class="${visibile === "analisi" ? "attivo" : ""}" onclick="vai('analisi')"><span class="icona">${icona("torta")}</span>Analisi</button>
@@ -1361,6 +1449,7 @@ function render() {
     <div class="menu-locale" style="left:${stato._locale.x}px;top:${stato._locale.y}px">${stato._locale.voci.map((v, i) => `<button class="${v.pericoloso ? "pericoloso" : ""}" onclick="voceMenuLocale(${i})">${v.testo}</button>`).join("")}</div>` : ""}`;
   if (stato.pagina === "form") attivaSwipeFoglio();
   if (stato.pagina === "impostazioni") attivaSwipeFoglio(chiudiImpostazioni);
+  aggiornaTastoTraccia();   // il tasto fluttuante nasce già nello stato dello scroll del momento
 }
 
 function vai(pagina) {
@@ -2143,6 +2232,10 @@ function attivaSwipeOrizzontale(el, sinistra, destra) {
 
   el.addEventListener("touchmove", e => {
     if (x0 === null) return;
+    // Nella schermata di tracciamento lo swipe è disabilitato per decisione
+    // esplicita di Daniele (11 nov 2026): il pan orizzontale del grafico è
+    // dello scorrimento nativo, e il preventDefault qui lo bloccherebbe
+    if (stato.pagina === "tracciamento") return;
     const dx = e.touches[0].clientX - x0, dy = e.touches[0].clientY - y0;
     if (!orizzontale && !(Math.abs(dx) > 24 && Math.abs(dx) > Math.abs(dy))) return;
     orizzontale = true;
@@ -2900,11 +2993,12 @@ function bannerMemoria() {
 function chiudiBannerMemoria() { if (bannerMemoriaEl) bannerMemoriaEl.classList.add("nascosto"); }
 
 /* Il corpo del backup: quello che viaggia nell'export manuale e dentro
-   le istantanee automatiche (stesso formato versione 3, così un'istantanea
+   le istantanee automatiche (stesso formato versione 4, così un'istantanea
    si può anche importare da fuori come un backup qualunque) */
-const corpoBackup = () => ({versione: 3, esportatoIl: iso(new Date()),
+const corpoBackup = () => ({versione: 4, esportatoIl: iso(new Date()),
   movimenti: dati.movimenti, categorie: dati.categorie, conti: dati.conti,
-  budget: dati.budget, periodi: dati.periodi, impostazioni: {...dati.impostazioni}});
+  budget: dati.budget, periodi: dati.periodi, tracciamento: dati.tracciamento,
+  impostazioni: {...dati.impostazioni}});
 
 /* Il promemoria dell'export manuale: l'unica copia dei dati che vive
    fuori dall'app è il file scaricato, e una copia scaricata due
@@ -3119,6 +3213,17 @@ async function sostituisciDati(b, titolo) {
     b.periodi = (b.periodi || []).filter(p =>
       dataOk(p.inizio) && dataOk(p.fine) && p.inizio <= p.fine)
       .map(p => ({inizio: p.inizio, fine: p.fine}));
+    // Il tracciamento (v4): nei backup vecchi non c'è e resta vuoto. Il
+    // punto di partenza deve avere date e cifra vere: il resto è rumore
+    b.tracciamento = (b.tracciamento && typeof b.tracciamento === "object"
+      && dataOk(String(b.tracciamento.inizio)) && Number.isFinite(+b.tracciamento.saldo))
+      ? {chiave: "app", inizio: String(b.tracciamento.inizio),
+         fine: dataOk(String(b.tracciamento.fine)) ? String(b.tracciamento.fine) : String(b.tracciamento.inizio),
+         saldo: arrotonda(+b.tracciamento.saldo),
+         aggiustamenti: (Array.isArray(b.tracciamento.aggiustamenti) ? b.tracciamento.aggiustamenti : [])
+           .filter(a => a && dataOk(String(a.periodo)) && Number.isFinite(+a.saldo))
+           .map(a => ({periodo: String(a.periodo), saldo: arrotonda(+a.saldo)}))}
+      : null;
     // Tutto si prepara nelle strutture qui sotto: i dati attuali restano
     // al loro posto finché la sostituzione non è riuscita davvero
     const nuovo = {movimenti: b.movimenti, categorie: b.categorie, conti: b.conti,
@@ -3166,13 +3271,15 @@ async function sostituisciDati(b, titolo) {
     if (db) {
       // Sostituzione in un'unica transazione: o entra tutto, o niente
       await new Promise((ris, err) => {
-        const tx = db.transaction(["movimenti","categorie","conti","budget","periodi","impostazioni"], "readwrite");
+        const tx = db.transaction(["movimenti","categorie","conti","budget","periodi","impostazioni","tracciamento"], "readwrite");
         for (const s of ["movimenti", "categorie", "conti", "budget", "periodi"]) {
           const o = tx.objectStore(s);
           o.clear();
           for (const x of nuovo[s]) o.put(x);
         }
         tx.objectStore("impostazioni").put(imp);
+        tx.objectStore("tracciamento").clear();
+        if (b.tracciamento) tx.objectStore("tracciamento").put(b.tracciamento);
         tx.oncomplete = ris;
         tx.onerror = () => err(tx.error || new Error("transazione"));
         tx.onabort = () => err(tx.error || new Error("annullata"));
@@ -3181,6 +3288,7 @@ async function sostituisciDati(b, titolo) {
     // Solo ora che i nuovi dati sono davvero al loro posto, l'app li usa
     for (const s of ["movimenti", "categorie", "conti", "budget", "periodi"]) dati[s] = nuovo[s];
     dati.impostazioni = imp;
+    dati.tracciamento = b.tracciamento;   // nei backup vecchi arriva null: tracciamento vuoto
     await assegnaOrdine();   // i backup senza numeri d'ordine ereditano quello della lista
     await assegnaColori();   // e chi è arrivato senza slot colore prende il primo libero
     // Si torna come da un foglio Impostazioni chiuso: così anche la sua
@@ -3196,13 +3304,375 @@ async function sostituisciDati(b, titolo) {
 }
 
 /* ================================================================
+   12-bis. TRACCIAMENTO CONTO
+   Un saldo noto (il punto di partenza, a FINE del periodo scelto) e
+   i movimenti registrati fanno il resto: ogni periodo è il precedente
+   più il suo bilancio. Gli aggiustamenti manuali fissano un saldo
+   lì dove il calcolo non basta più, e la catena si ricalcola in
+   avanti da lì. Solo movimenti registrati: le spese programmate non
+   c'entrano (decisione di Daniele). Se cambia la modalità dei
+   periodi, il tracciamento riparte da zero in silenzio.
+   ================================================================ */
+
+// I periodi del tracciamento: in mensile (e settimanale) i mesi dal primo
+// movimento a oggi; in Libero i chiusi più l'aperto. L'ultimo chiude a
+// oggi: il suo punto nel grafico è vivo, si muove col presente
+function periodiTracciamento() {
+  const imp = dati.impostazioni, og = new Date();
+  if (imp.periodoModalita === "libero") {
+    const lista = periodiOrdinati().map(p => ({inizio: p.inizio, fine: p.fine}));
+    if (imp.liberoInizio) lista.push({inizio: imp.liberoInizio, fine: iso(og)});
+    if (lista.length) lista[lista.length - 1].aperto = true;
+    return lista;
+  }
+  // Nel settimanale il tracciamento conta a mesi: l'elenco del punto di
+  // partenza resta leggibile anche a settimane fittate
+  let y = og.getFullYear(), m = og.getMonth();
+  if (dati.movimenti.length) {
+    const prima = new Date([...dati.movimenti].sort((a, b) => a.data.localeCompare(b.data))[0].data + "T12:00:00");
+    y = prima.getFullYear(); m = prima.getMonth();
+  }
+  const lista = [];
+  while (y * 12 + m <= og.getFullYear() * 12 + og.getMonth()) {
+    lista.push({inizio: iso(new Date(y, m, 1)), fine: iso(new Date(y, m + 1, 0)),
+                etichetta: cap(MESI[m]) + " " + y});
+    m++; if (m > 11) { m = 0; y++; }
+  }
+  if (lista.length) { lista[lista.length - 1].fine = iso(og); lista[lista.length - 1].aperto = true; }
+  return lista;
+}
+
+// L'etichetta di un periodo del tracciamento
+function etichettaTraccia(p) {
+  if (p.etichetta) return p.etichetta + (p.aperto ? " – oggi" : "");
+  const da = new Date(p.inizio + "T12:00:00"), a = new Date(p.fine + "T12:00:00");
+  const f = d => d.getDate() + " " + MESI_BREVI[d.getMonth()];
+  const anno = a.getFullYear() !== da.getFullYear() ? " " + a.getFullYear() : "";
+  return da.getFullYear() === a.getFullYear() && da.getMonth() === a.getMonth()
+    ? cap(MESI[da.getMonth()]) + " " + da.getFullYear()
+    : f(da) + " – " + f(a) + anno;
+}
+
+// Il bilancio dei movimenti registrati tra due date (estremi inclusi)
+const bilancioTra = (da, a) => arrotonda(dati.movimenti.reduce((s, m) =>
+  (m.data >= da && m.data <= a) ? s + (m.tipo === "entrata" ? m.importo : -m.importo) : s, 0));
+
+// La catena dei saldi: dal punto di partenza in avanti. Senza punto, o con
+// un punto che nei periodi di oggi non esiste più (modalità cambiata),
+// restituisce null: la schermata si comporta come alla prima apertura
+function catenaTracciamento() {
+  const t = dati.tracciamento;
+  if (!t || !dataOk(String(t.inizio)) || !Number.isFinite(+t.saldo)) return null;
+  const periodi = periodiTracciamento();
+  const i0 = periodi.findIndex(p => p.inizio === t.inizio);
+  if (i0 < 0) return null;
+  // Gli aggiustamenti si agganciano all'INIZIO del periodo: è l'unica
+  // cosa che non si sposta da un giorno all'altro (l'aperto chiude a oggi)
+  const fissi = new Map((Array.isArray(t.aggiustamenti) ? t.aggiustamenti : [])
+    .filter(a => dataOk(String(a.periodo)) && Number.isFinite(+a.saldo))
+    .map(a => [a.periodo, arrotonda(+a.saldo)]));
+  const catena = [];
+  let saldo = null;
+  for (let i = i0; i < periodi.length; i++) {
+    const p = periodi[i];
+    const bil = i === i0 ? null : bilancioTra(p.inizio, p.fine);
+    saldo = saldo === null ? arrotonda(+t.saldo) : arrotonda(saldo + bil);
+    const fisso = fissi.get(p.inizio);
+    if (fisso != null) saldo = fisso;   // l'aggiustamento fissa il saldo: la catena riparte da lui
+    catena.push({...p, bilancio: bil, saldo, aggiustato: fisso != null});
+  }
+  return catena;
+}
+
+const salvaTracciamento = () => dati.tracciamento ? dbSalva("tracciamento", dati.tracciamento) : Promise.resolve();
+
+// L'ingresso nel tracciamento: solo dal tasto fluttuante in Analisi, e
+// solo in apertura. Si esce con la freccetta ‹ della pagina o col tasto
+// indietro del telefono (v. renderTracciamento): niente toggle
+function apriTracciamento() {
+  stato._panTraccia = null;   // entrando da fuori si riparte dal presente
+  vai("tracciamento");
+}
+
+/* ---- Il punto di partenza: cifra e periodo dall'elenco fisso ---- */
+function apriPuntoPartenza() {
+  const periodi = periodiTracciamento();
+  apriModale(`<h3>Punto di partenza</h3>
+    <div class="campo"><div class="etichetta-campo">Periodo</div>
+      <select id="tPeriodo">${periodi.map((p, i) =>
+        `<option value="${i}"${i === periodi.length - 1 ? " selected" : ""}>${esc(etichettaTraccia(p))}</option>`).join("")}</select></div>
+    <div class="campo"><div class="etichetta-campo">Saldo a fine periodo (€)</div>
+      <input type="text" id="tSaldo" inputmode="decimal" placeholder="es. 1250,00"></div>
+    <div class="azioni-modale">
+      <button class="btn-secondario" onclick="chiudiModale()">Annulla</button>
+      <button class="btn-principale" onclick="salvaPuntoPartenza()">Salva</button>
+    </div>`);
+}
+
+async function salvaPuntoPartenza() {
+  const periodi = periodiTracciamento();
+  const p = periodi[Number(document.getElementById("tPeriodo").value)];
+  const saldo = parseFloat(String(document.getElementById("tSaldo").value).replace(",", "."));
+  if (!p || !Number.isFinite(saldo))
+    return apriModale(`<h3>Punto incompleto</h3><p class="avviso">Serve una cifra: è il saldo a fine del periodo scelto.</p>
+      <button class="btn-principale" onclick="apriPuntoPartenza()">OK</button>`);
+  dati.tracciamento = {chiave: "app", inizio: p.inizio, fine: p.fine,
+                       saldo: arrotonda(saldo), aggiustamenti: []};
+  await salvaTracciamento();
+  chiudiModale(); render();
+}
+
+/* ---- L'aggiustamento manuale di un periodo ---- */
+function apriAggiustamento(inizio) {
+  const catena = catenaTracciamento();
+  const p = catena && catena.find(x => x.inizio === inizio);
+  if (!p) return;
+  /* Le due scritte del foglietto sono invertite (richiesta di Daniele):
+     l'intestazione è il NOME del periodo, e «Aggiusta manualmente» sta
+     sotto, al posto dell'etichetta, in tondo semplice (classe .tonda) */
+  apriModale(`<h3>${esc(etichettaTraccia(p))}</h3>
+    <div class="campo"><div class="etichetta-campo tonda">Aggiusta manualmente</div>
+      <!-- type text e non number: un number con la virgola («1245,55») il browser lo scarta e la casella nasce vuota -->
+      <input type="text" id="tSaldo" inputmode="decimal" value="${p.saldo.toFixed(2).replace(".", ",")}"></div>
+    <div class="azioni-modale">
+      ${p.aggiustato ? `<button class="btn-secondario" onclick="annullaAggiustamento('${inizio}')">Annulla questo aggiustamento</button>` : ""}
+      <button class="btn-secondario" onclick="chiudiModale()">Chiudi</button>
+      <button class="btn-principale" onclick="salvaAggiustamento('${inizio}')">Salva</button>
+    </div>`);
+}
+
+async function salvaAggiustamento(inizio) {
+  const t = dati.tracciamento; if (!t) return;
+  const saldo = parseFloat(String(document.getElementById("tSaldo").value).replace(",", "."));
+  if (!Number.isFinite(saldo))
+    return apriModale(`<h3>Cifra mancante</h3><p class="avviso">Serve una cifra: è il saldo a fine del periodo.</p>
+      <button class="btn-principale" onclick="apriAggiustamento('${inizio}')">OK</button>`);
+  const lista = (t.aggiustamenti || []).filter(a => a.periodo !== inizio);
+  lista.push({periodo: inizio, saldo: arrotonda(saldo)});
+  lista.sort((a, b) => a.periodo.localeCompare(b.periodo));
+  t.aggiustamenti = lista;
+  await salvaTracciamento();
+  chiudiModale(); render();
+}
+
+async function annullaAggiustamento(inizio) {
+  const t = dati.tracciamento; if (!t) return;
+  t.aggiustamenti = (t.aggiustamenti || []).filter(a => a.periodo !== inizio);
+  await salvaTracciamento();
+  render();
+}
+
+async function annullaAggiustamenti() {
+  const t = dati.tracciamento;
+  if (!t || !(t.aggiustamenti || []).length) return toast("Nessun aggiustamento da annullare");
+  apriConferma("Annullare tutti gli aggiustamenti manuali? I saldi tornano al calcolo dai movimenti.", async () => {
+    t.aggiustamenti = [];
+    await salvaTracciamento();
+    chiudiModale(); render();
+  });
+}
+
+async function reimpostaPunto() {
+  apriConferma("Reimpostare il punto di partenza? Il tracciamento riparte da zero.", async () => {
+    dati.tracciamento = null;
+    if (db) await dbElimina("tracciamento", "app");
+    chiudiModale(); render();
+  });
+}
+
+/* ---- La schermata: pagina intera a scorrimento, con la sua voce nella
+   cronologia (l'indietro riporta ad Analisi). Niente fasce fisse in cima:
+   tutto scorre, la fusione in fondo incontra solo la barra di navigazione ---- */
+function renderTracciamento() {
+  const catena = catenaTracciamento();
+  const testa = `<div class="intestazione-pagina">
+      <button class="btn-freccia" onclick="vai('analisi')">‹</button>
+      <h2>Tracciamento conto</h2></div>`;
+  let corpo;
+  if (!catena) {
+    // Prima apertura (o modalità dei periodi cambiata): solo il punto di partenza
+    corpo = testa +
+      `<button class="btn-secondario senza-bordo" onclick="apriPuntoPartenza()">${icona("trending-up")} Imposta punto di partenza</button>`;
+  } else {
+    corpo = testa + graficoTracciamento(catena) +
+      catena.map((p, i) => rigaTracciamento(p, i > 0 ? catena[i - 1].saldo : null)).join("") +
+      `<button class="btn-secondario senza-bordo" onclick="annullaAggiustamenti()">Annulla tutti gli aggiustamenti manuali</button>
+      <button class="btn-secondario senza-bordo" onclick="reimpostaPunto()">Reimposta punto di partenza</button>`;
+  }
+  document.getElementById("app").innerHTML = `
+    <div class="pagina-traccia"><div class="corpo">${corpo}</div></div>
+    <div class="sentinella-fusione"></div>
+    <div class="nav-basso">
+      <button onclick="vai('movimenti')"><span class="icona">${icona("hand-coins")}</span>Movimenti</button>
+      <button class="attivo" onclick="vai('analisi')"><span class="icona">${icona("torta")}</span>Analisi</button>
+      <button onclick="vai('budget')"><span class="icona">${icona("bersaglio")}</span>Budget</button>
+      <button class="piu" onclick="apriInserimento()"><span class="icona">＋</span></button>
+    </div>`;
+  ripristinaPanTraccia();
+  aggiornaTastoTraccia();
+}
+
+// Una riga della sintesi: il tocco apre l'aggiustamento del saldo.
+// Prima del saldo la freccia del confronto col SALDO VERO del periodo
+// precedente (prec, passato dal chiamante): non basta guardare il
+// bilancio, perché un aggiustamento manuale può invertire la direzione
+// (il saldo scende anche con il periodo in attivo) e la freccia deve
+// seguirlo. Il punto di partenza (senza precedente) non ha freccia
+function rigaTracciamento(p, prec) {
+  const bil = p.bilancio == null ? "" :
+    `<div class="sotto-bilancio">${p.bilancio >= 0 ? "+" : "−"} ${eur(Math.abs(p.bilancio))}${p.aperto ? " · fino a oggi" : ""}</div>`;
+  const sale = prec != null && p.saldo >= prec;
+  const freccia = prec == null ? "" :
+    `<span class="${sale ? "verde" : "rosso"}">${icona(sale ? "freccia-su" : "freccia-giu")}</span>`;
+  return `<div class="riga-traccia${p.aperto ? " aperta" : ""}" onclick="apriAggiustamento('${p.inizio}')">
+    <div><div class="quando">${esc(etichettaTraccia(p))}${p.aggiustato ? ` <span class="aggiustato">aggiustato</span>` : ""}</div>${bil}</div>
+    <div class="saldo">${freccia}${eur(p.saldo)}</div>
+  </div>`;
+}
+
+/* ---- Il grafico: una linea sola (il saldo), asse x per periodi.
+   Pallini alle chiusure, punto vivo sull'aperto. L'asse dice il numero
+   del mese; al cambio d'anno "m/aa" e una riga verticale tratteggiata,
+   solo lì. La scala copre TUTTI i saldi, negativi compresi (due lati).
+   Oltre 12 periodi il disegno si allarga e il pan è lo scorrimento
+   nativo del contenitore: niente riconoscitori scritti a mano ---- */
+function graficoTracciamento(catena) {
+  const L = 10, S = 16, F = 20, H = 170, PASSO = 26, LARGO = 344;
+  const n = catena.length;
+  const largo = n < 12 ? LARGO : L * 2 + (n - 1) * PASSO;
+  const passo = n > 1 ? (largo - 2 * L) / (n - 1) : 0;
+  const x = i => L + i * passo;
+  const saldi = catena.map(p => p.saldo);
+  let max = Math.max(0, ...saldi), min = Math.min(0, ...saldi);
+  if (max === min) { max += 1; min -= 1; }   // un solo saldo: la scala respira
+  const y = v => S + (max - v) / (max - min) * (H - S - F);
+  let g = `<div class="scorrimento-traccia" onscroll="segnaPanTraccia()">
+    <svg class="grafico-traccia" width="${largo}" height="${H}" viewBox="0 0 ${largo} ${H}" role="img" aria-label="Andamento del saldo">`;
+  if (min < 0) g += `<line x1="${L}" y1="${y(0).toFixed(1)}" x2="${largo - L}" y2="${y(0).toFixed(1)}" stroke="var(--bordo)" stroke-dasharray="3 3"/>`;
+  g += `<polyline points="${catena.map((p, i) => x(i).toFixed(1) + "," + y(p.saldo).toFixed(1)).join(" ")}" style="stroke:var(--accento)"/>`;
+  catena.forEach((p, i) => {
+    const d = new Date(p.inizio + "T12:00:00");
+    const cambio = i > 0 && d.getFullYear() !== new Date(catena[i - 1].inizio + "T12:00:00").getFullYear();
+    if (cambio) g += `<line x1="${x(i).toFixed(1)}" y1="${S - 4}" x2="${x(i).toFixed(1)}" y2="${H - F + 4}" stroke="var(--bordo)" stroke-dasharray="3 3"/>`;
+    g += `<text x="${x(i).toFixed(1)}" y="${H - 6}" text-anchor="middle">${d.getMonth() + 1}${cambio ? "/" + String(d.getFullYear()).slice(2) : ""}</text>`;
+  });
+  catena.forEach((p, i) => {
+    g += p.aperto
+      ? `<circle cx="${x(i).toFixed(1)}" cy="${y(p.saldo).toFixed(1)}" r="4" style="fill:var(--accento)" class="punto-vivo"/>`
+      : `<circle cx="${x(i).toFixed(1)}" cy="${y(p.saldo).toFixed(1)}" r="3" style="fill:var(--accento)"/>`;
+  });
+  /* Le scritte dei saldi: quante più ne stanno, mai sovrapposte (se due si
+     pestano i piedi se ne nasconde una, resta l'altra). Il saldo dell'ULTIMO
+     periodo è il riferimento fisso: si vede SEMPRE, in accento, e gli altri
+     si posizionano attorno a lui, da sinistra a destra, sopra o sotto il
+     proprio punto; chi non trova posto in nessuna delle due si nasconde.
+     Solo interi e SENZA il punto delle migliaia (richiesta di Daniele:
+     fa confusione, il numero semplice si legge meglio); larghezza stimata
+     prudente, come le etichette del flusso */
+  const intero = v => String(Math.round(v));
+  const lar = s => s.length * 5.4 + 4;
+  const posate = [];   // le scritte già al loro posto
+  const scrivi = (i, sopra, ultimo) => {
+    const cx = x(i), cy = y(catena[i].saldo), w = lar(intero(catena[i].saldo));
+    const ty = sopra ? cy - 9 : cy + 16;   // solo interi, e un filo più lontano dal puntino
+    const y1 = sopra ? cy - 18 : cy + 8, y2 = sopra ? cy - 8 : cy + 18;
+    if (y1 < S - 6 || y2 > H - 10) return false;   // fuori dal disegno o addosso all'asse dei mesi
+    if (posate.some(b => Math.abs(b.x - cx) < (b.w + w) / 2 && y1 < b.y2 && y2 > b.y1)) return false;
+    posate.push({x: cx, y1, y2, w});
+    g += `<text x="${cx.toFixed(1)}" y="${ty.toFixed(1)}" text-anchor="middle"${ultimo ? ' style="fill:var(--accento)"' : ""}>${intero(catena[i].saldo)}</text>`;
+    return true;
+  };
+  const cima = y(catena[n - 1].saldo) - 18 >= S - 6;   // il riferimento: sopra se ci sta, altrimenti sotto
+  if (!scrivi(n - 1, cima, true)) scrivi(n - 1, !cima, true);
+  for (let i = 0; i < n - 1; i++) if (!scrivi(i, true, false)) scrivi(i, false, false);
+  return g + `</svg></div>`;
+}
+
+// Il pan si conserva tra i render: chi è andato a guardare il passato ci resta
+function segnaPanTraccia() {
+  const el = document.querySelector(".scorrimento-traccia");
+  if (el) stato._panTraccia = el.scrollLeft;
+}
+function ripristinaPanTraccia() {
+  const el = document.querySelector(".scorrimento-traccia");
+  if (!el) return;
+  if (stato._panTraccia == null) el.scrollLeft = el.scrollWidth;   // si apre sul presente (destra)
+  else el.scrollLeft = stato._panTraccia;
+}
+
+/* ---- Il tasto fluttuante ----
+   Solo in Analisi (nella schermata si chiude con la freccetta ‹ o coi
+   tasti di sistema: niente toggle), e solo alla sommità
+   della pagina: scorrendo scende e sfuma, con isteresi sulla soglia (si
+   nasconde appena si scolla, ritorna solo a pagina ferma in cima). Il
+   tocco lungo (400ms) accende il fumetto col nome del tasto; il click del
+   rilascio viene inghiottito in cattura su document, così la didascalia
+   si legge senza aprire la schermata. */
+const tastoTracciaHtml = () =>
+  (stato.pagina === "analisi") && !stato._locale
+    ? `<div class="tasto-traccia" id="tasto-traccia">
+    <button id="btn-traccia" aria-label="Tracciamento conto"
+      ontouchstart="tieniTastoTraccia()" ontouchend="lasciaTastoTraccia()" ontouchcancel="lasciaTastoTraccia()"
+      onmousedown="tieniTastoTraccia()" onmouseup="lasciaTastoTraccia()" onmouseleave="lasciaTastoTraccia()"
+      onclick="apriTracciamento()">${icona("trending-up")}</button>
+  </div>` : "";
+
+let tracciaNascosto = null;   // l'ultimo stato del tasto: l'isteresi vive qui
+function aggiornaTastoTraccia() {
+  const el = document.getElementById("tasto-traccia");
+  if (!el || !el.classList) { tracciaNascosto = null; return; }
+  const y = (typeof window === "object" && window.scrollY) || 0;
+  const nascosto = tracciaNascosto == null ? y > 8 : (tracciaNascosto ? y > 2 : y > 8);
+  tracciaNascosto = nascosto;
+  el.classList.toggle("nascosto", nascosto);
+}
+if (typeof window === "object" && window.addEventListener)
+  window.addEventListener("scroll", aggiornaTastoTraccia, {passive: true});
+
+let tracciaTieni = null;   // il timer del tocco lungo
+function tieniTastoTraccia() {
+  lasciaTastoTraccia();
+  tracciaTieni = setTimeout(mostraFumettoTraccia, 400);
+}
+function lasciaTastoTraccia() {
+  if (tracciaTieni) { clearTimeout(tracciaTieni); tracciaTieni = null; }
+}
+function mostraFumettoTraccia() {
+  tracciaTieni = null;
+  if (stato._fumetto) return;
+  const b = document.getElementById("btn-traccia");
+  if (!b) return;
+  stato._fumetto = true;   // lo stato prima del DOM: è lui la verità anche in prova
+  if (b.appendChild) {   // il DOM vero lo ha; dove non c'è resta lo stato
+    const f = document.createElement("span");
+    f.className = "fumetto";
+    f.textContent = "Tracciamento conto";
+    b.appendChild(f);
+  }
+  // il click del rilascio non deve aprire la schermata: uno solo, inghiottito
+  const ingoia = e => { e.stopPropagation(); e.preventDefault();
+                        document.removeEventListener("click", ingoia, true); };
+  document.addEventListener("click", ingoia, true);
+  // il fumetto se ne va al tocco dopo, che passa normalmente
+  const via = () => { togliFumettoTraccia();
+                      document.removeEventListener("pointerdown", via, true); };
+  document.addEventListener("pointerdown", via, true);
+}
+function togliFumettoTraccia() {
+  if (!stato._fumetto) return;
+  stato._fumetto = false;
+  const f = document.querySelector(".fumetto");
+  if (f && f.remove) f.remove();
+}
+
+/* ================================================================
    13. DATI DI ESEMPIO, CANCELLAZIONE TOTALE, MODALI, AVVIO
    ================================================================ */
 async function svuotaDati() {
-  for (const s of ["movimenti", "categorie", "conti", "budget", "periodi", "impostazioni"])
+  for (const s of ["movimenti", "categorie", "conti", "budget", "periodi", "impostazioni", "tracciamento"])
     if (db) await prom(tabella(s, "readwrite").clear());
   dati.movimenti = []; dati.categorie = []; dati.conti = []; dati.budget = [];
-  dati.periodi = []; dati.impostazioni = null;
+  dati.periodi = []; dati.impostazioni = null; dati.tracciamento = null;
   // Le istantanee sopravvivono allo svuotamento: il loro contatore id continua
   dati._id = {movimenti: 1, categorie: 1, conti: 1, budget: 1, periodi: 1, backup: dati._id.backup};
 }
@@ -3219,19 +3689,27 @@ function caricaEsempio() {
     const idConto = nome => dati.conti.find(c => c.nome === nome).id;
     const contanti = idConto("Contanti"), contoB = idConto("Carta"), satispay = idConto("Satispay");
     const d = giorni => { const x = new Date(oggi); x.setDate(oggi.getDate() - giorni); return iso(x); };
-    // quattro mesi di esempio (richiesta di Daniele, 27 ott): stipendio e
+    // ventiquattro mesi di esempio (richiesta di Daniele, 11 nov: così lo
+    // scorrimento laterale del grafico si prova davvero): stipendio e
     // affitto lo stesso giorno — il picco a V del flusso si vede subito —
-    // e attorno le spesucce del quotidiano, piccole e su giorni diversi
+    // e attorno le spesucce del quotidiano, con importi che respirano da
+    // un mese all'altro. Ogni mese ha il suo gruppo ancorato al 15 (il
+    // mese corrente parte da oggi meno due), così nessuno si sparpaglia
     const esempi = [];
-    for (const fa of [2, 33, 63, 94]) esempi.push(
-      {tipo: "entrata", importo: 2400,  data: d(fa),      nota: "Stipendio",        conto: contoB,   categoria: stipendio},
-      {tipo: "uscita",  importo: 520,   data: d(fa),      nota: "Affitto",          conto: contoB,   categoria: casa},
-      {tipo: "uscita",  importo: 45.60, data: d(fa + 1),  nota: "Supermercato",     conto: satispay, categoria: spesa},
-      {tipo: "uscita",  importo: 12.50, data: d(fa + 3),  nota: "Pizzeria",         conto: contanti, categoria: fuori},
-      {tipo: "uscita",  importo: 1.30,  data: d(fa + 5),  nota: "Caffè al bar",     conto: contanti, categoria: caffe},
-      {tipo: "uscita",  importo: 8.40,  data: d(fa + 8),  nota: "Caffè e cornetto", conto: contanti, categoria: caffe},
-      {tipo: "uscita",  importo: 32.10, data: d(fa + 12), nota: "Spesa",            conto: satispay, categoria: spesa}
-    );
+    const o0 = new Date(oggi.getFullYear(), oggi.getMonth(), oggi.getDate());
+    for (let k = 0; k < 24; k++) {
+      const gg = new Date(oggi.getFullYear(), oggi.getMonth() - k, k === 0 ? Math.max(1, oggi.getDate() - 2) : 15);
+      const fa = Math.round((o0 - gg) / 864e5);
+      const onda = 1 + (k % 3) * 0.08;   // i mesi non sono mai uguali
+      esempi.push(
+        {tipo: "entrata", importo: arrotonda(2400 * onda), data: d(fa),      nota: "Stipendio",        conto: contoB,   categoria: stipendio},
+        {tipo: "uscita",  importo: 520,                  data: d(fa),        nota: "Affitto",          conto: contoB,   categoria: casa},
+        {tipo: "uscita",  importo: arrotonda(45.60 * onda), data: d(fa + 1),  nota: "Supermercato",     conto: satispay, categoria: spesa},
+        {tipo: "uscita",  importo: 12.50,                data: d(fa + 3),    nota: "Pizzeria",         conto: contanti, categoria: fuori},
+        {tipo: "uscita",  importo: 1.30,                 data: d(fa + 5),    nota: "Caffè al bar",     conto: contanti, categoria: caffe},
+        {tipo: "uscita",  importo: 8.40,                 data: d(fa + 8),    nota: "Caffè e cornetto", conto: contanti, categoria: caffe},
+        {tipo: "uscita",  importo: arrotonda(32.10 * onda), data: d(fa + 12), nota: "Spesa",            conto: satispay, categoria: spesa});
+    }
     // e il presente: oggi e ieri, con le piccole spese della giornata
     esempi.push(
       {tipo: "uscita",  importo: 45.60, data: d(0), nota: "Supermercato", conto: satispay, categoria: spesa},
@@ -3246,6 +3724,19 @@ function caricaEsempio() {
       const b = {nome, categorie: cats, limite};
       await dbSalva("budget", b); dati.budget.push(b);
     }
+    // I periodi personalizzati del Libero: coprono gli stessi mesi dei
+    // movimenti, così anche in Libero (e nel tracciamento) c'è storia da
+    // sfogliare. In mensile restano dormienti
+    const prima = esempi.reduce((m, e) => e.data < m ? e.data : m);
+    const pd = new Date(prima + "T12:00:00");
+    let y = pd.getFullYear(), mo = pd.getMonth();
+    while (y * 12 + mo < oggi.getFullYear() * 12 + oggi.getMonth()) {
+      const p = {inizio: iso(new Date(y, mo, 1)), fine: iso(new Date(y, mo + 1, 0))};
+      await dbSalva("periodi", p); dati.periodi.push(p);
+      mo++; if (mo > 11) { mo = 0; y++; }
+    }
+    dati.impostazioni.liberoInizio = iso(new Date(oggi.getFullYear(), oggi.getMonth(), 1));
+    await salvaImpostazioni();
     await assegnaOrdine();   // i budget d'esempio nascono SENZA numero d'ordine, ma l'avvio (che lo assegna) è già passato: senza questa riga il menù ⋮ li scambia senza muoverli
     chiudiModale(); stato.offset = 0; stato.filtro = null; vai(stato.dietro);
   });
@@ -3421,7 +3912,7 @@ async function migraDati() {
    il tasto indietro chiude la schermata aperta. Anche Analisi e Budget
    lasciano la loro voce (voceSezione): il tasto indietro riporta prima a
    Movimenti e da lì, col secondo colpo, esce dall'app. */
-const PAGINE_SCHERMO = ["form", "impostazioni", "periodi"];
+const PAGINE_SCHERMO = ["form", "impostazioni", "periodi", "tracciamento"];
 let pilaStoria = 0;          // voci messe nella cronologia e non ancora tolte
 let storiaAspetta = false;   // in volo il popstate di una chiusura già fatta da noi
 let spingeInAttesa = false;  // schermata aperta mentre quel popstate era in volo
@@ -3456,6 +3947,7 @@ function chiudeSchermata() {
   if (stato.pagina === "form") return chiudiForm;
   if (stato.pagina === "impostazioni") return chiudiImpostazioni;
   if (stato.pagina === "periodi") return () => vai("impostazioni");
+  if (stato.pagina === "tracciamento") return () => vai("analisi");   // la schermata sta sopra Analisi
   if (stato.filtro?.tipo === "budget") return chiudiBudgetDettaglio;
   if (stato.filtro && stato.pagina === "movimenti") return togliFiltro;
   // Sezione Analisi o Budget: il tasto indietro riporta a Movimenti
