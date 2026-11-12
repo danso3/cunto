@@ -1,4 +1,4 @@
-const NOME = "cunto-v19";
+const NOME = "cunto-v20";
 const FILE = ["./", "./manifest.webmanifest", "icona-192.png", "icona-512.png",
               "icona-512-mascherabile.png", "apple-touch-icon.png"];
 
