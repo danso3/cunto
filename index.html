@@ -12,8 +12,10 @@
      questa direttiva, e senza 'self' rifiuta l'installazione (scoperto sul
      deploy vero da Daniele, 26 ott 2026). data: copre il favicon -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; manifest-src 'self'; worker-src 'self'">
-<!-- Favicon: il disegno di Daniele — il registro con la moneta €, come l'icona dell'app -->
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect x='0' y='0' width='512' height='512' fill='%234f5f70'/><rect x='152' y='152' width='204' height='236' rx='20' fill='none' stroke='%23ffffff' stroke-width='14'/><line x1='192' y1='159' x2='192' y2='381' stroke='%23ffffff' stroke-width='14' stroke-linecap='round'/><line x1='216' y1='214' x2='320' y2='214' stroke='%23ffffff' stroke-width='12' stroke-linecap='round'/><line x1='216' y1='262' x2='320' y2='262' stroke='%23ffffff' stroke-width='12' stroke-linecap='round'/><line x1='216' y1='310' x2='320' y2='310' stroke='%23ffffff' stroke-width='12' stroke-linecap='round'/><line x1='216' y1='358' x2='276' y2='358' stroke='%23ffffff' stroke-width='12' stroke-linecap='round'/><circle cx='352' cy='176' r='58' fill='%23f2c14e' stroke='%23ffffff' stroke-width='13'/><line x1='352' y1='148' x2='352' y2='204' stroke='%231b2631' stroke-width='10' stroke-linecap='round'/><line x1='343' y1='157' x2='361' y2='157' stroke='%231b2631' stroke-width='9' stroke-linecap='round'/><line x1='343' y1='185' x2='361' y2='185' stroke='%231b2631' stroke-width='9' stroke-linecap='round'/></svg>">
+<!-- Favicon: il disegno di Daniele (il registro con la moneta €), vestito
+     coi colori dell'app dal 12 nov 2026: costina blu accento, corpo carta,
+     contorni del colore del testo, monetina ambra -->
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect x='0' y='0' width='512' height='512' fill='%234f5f70'/><rect x='152' y='152' width='204' height='236' rx='20' fill='%23f2f5f8' stroke='%231b2631' stroke-width='16'/><line x1='192' y1='166' x2='192' y2='374' stroke='%232b5f9e' stroke-width='18' stroke-linecap='round'/><line x1='232' y1='214' x2='336' y2='214' stroke='%231b2631' stroke-width='13' stroke-linecap='round'/><line x1='232' y1='262' x2='336' y2='262' stroke='%231b2631' stroke-width='13' stroke-linecap='round'/><line x1='232' y1='310' x2='336' y2='310' stroke='%231b2631' stroke-width='13' stroke-linecap='round'/><line x1='232' y1='358' x2='292' y2='358' stroke='%231b2631' stroke-width='13' stroke-linecap='round'/><circle cx='352' cy='176' r='58' fill='%23f2c14e' stroke='%231b2631' stroke-width='14'/><line x1='352' y1='146' x2='352' y2='206' stroke='%231b2631' stroke-width='11' stroke-linecap='round'/><line x1='341' y1='158' x2='363' y2='158' stroke='%231b2631' stroke-width='10' stroke-linecap='round'/><line x1='341' y1='194' x2='363' y2='194' stroke='%231b2631' stroke-width='10' stroke-linecap='round'/></svg>">
 <!-- Il pacchetto PWA: dichiarato quando l'app è pubblicata su un sito.
      In anteprima o da file locale i file non ci sono e non succede nulla -->
 <link rel="manifest" href="manifest.webmanifest">
@@ -484,7 +486,10 @@
   .riga-traccia .saldo { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap;
                          display: flex; align-items: center; gap: 4px; }
   .riga-traccia .saldo .ico { width: 14px; height: 14px; }
-  .riga-traccia .aggiustato { font-size: 11px; font-weight: 700; color: var(--accento); }
+  /* Il segno dell'aggiustamento: un pallino blu alto mezzo rigo accanto al
+     nome del periodo (richiesta di Daniele: la scritta «aggiustato» urlava) */
+  .riga-traccia .pallino-aggiustato { display: inline-block; width: 7px; height: 7px;
+    border-radius: 50%; background: var(--accento); margin-left: 5px; vertical-align: middle; }
   /* La tendina del punto di partenza: un campo come gli altri */
   .campo select { width: 100%; padding: 12px 2px; border: none; border-bottom: 1px solid var(--bordo);
                   background: none; font-size: 15px; color: var(--testo); }
@@ -639,7 +644,9 @@
   .banner-filtro {
     display: flex; align-items: center; justify-content: space-between; gap: 8px;
     background: var(--tenue); border-radius: 999px;
-    padding-left: 14px; margin: 12px 12px 0; font-size: 14px; font-weight: 600; color: var(--accento);
+    padding-left: 14px; margin: 12px 12px 12px; font-size: 14px; font-weight: 600; color: var(--accento);
+    /* il margine sotto eguaglia quello sopra (12px fino alla fascia): la
+       voce del filtro non sta attaccata ai movimenti che filtra */
   }
   .banner-filtro span { display: flex; align-items: center; gap: 6px; min-width: 0; }
   .banner-filtro button { background: none; border: none; color: var(--accento); font-size: 18px; padding: 12px 16px; }
@@ -3440,10 +3447,13 @@ function apriAggiustamento(inizio) {
       <!-- type text e non number: un number con la virgola («1245,55») il browser lo scarta e la casella nasce vuota -->
       <input type="text" id="tSaldo" inputmode="decimal" value="${p.saldo.toFixed(2).replace(".", ",")}"></div>
     <div class="azioni-modale">
-      ${p.aggiustato ? `<button class="btn-secondario" onclick="annullaAggiustamento('${inizio}')">Annulla questo aggiustamento</button>` : ""}
-      <button class="btn-secondario" onclick="chiudiModale()">Chiudi</button>
-      <button class="btn-principale" onclick="salvaAggiustamento('${inizio}')">Salva</button>
-    </div>`);
+      ${p.aggiustato
+        ? `<button class="btn-secondario" onclick="annullaAggiustamento('${inizio}')">Annulla aggiustamento</button>
+      <button class="btn-secondario" onclick="chiudiModale()">Chiudi</button>`
+        : `<button class="btn-secondario" onclick="chiudiModale()">Chiudi</button>
+      <button class="btn-principale" onclick="salvaAggiustamento('${inizio}')">Salva</button>`}
+    </div>
+    ${p.aggiustato ? `<button class="btn-principale" style="margin-top:10px" onclick="salvaAggiustamento('${inizio}')">Salva</button>` : ""}`);
 }
 
 async function salvaAggiustamento(inizio) {
@@ -3530,7 +3540,7 @@ function rigaTracciamento(p, prec) {
   const freccia = prec == null ? "" :
     `<span class="${sale ? "verde" : "rosso"}">${icona(sale ? "freccia-su" : "freccia-giu")}</span>`;
   return `<div class="riga-traccia${p.aperto ? " aperta" : ""}" onclick="apriAggiustamento('${p.inizio}')">
-    <div><div class="quando">${esc(etichettaTraccia(p))}${p.aggiustato ? ` <span class="aggiustato">aggiustato</span>` : ""}</div>${bil}</div>
+    <div><div class="quando">${esc(etichettaTraccia(p))}${p.aggiustato ? ` <span class="pallino-aggiustato" title="Aggiustato"></span>` : ""}</div>${bil}</div>
     <div class="saldo">${freccia}${eur(p.saldo)}</div>
   </div>`;
 }
