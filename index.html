@@ -463,6 +463,11 @@
   .grafico-traccia { display: block; }
   .grafico-traccia text { fill: var(--neutro); font-size: 9px; font-weight: 600; }
   .grafico-traccia polyline { fill: none; stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round; }
+  /* La proiezione all'indietro: grigina e finemente tratteggiata, con i
+     suoi pallinetti piccoli. Coerente coi dati, ma non giurata: l'opacità
+     la tiene sullo sfondo rispetto alla linea vera in accento */
+  .grafico-traccia .proiezione { stroke: var(--neutro); stroke-dasharray: 3 4; opacity: .6; }
+  .grafico-traccia .punto-proiettato { fill: var(--neutro); opacity: .6; }
   /* Nella schermata non c'è la fascia fissa in cima: la fusione in alto
      non ha niente da fondersi, resta solo quella in fondo con la barra.
      La sentinella del contatto la mette renderTracciamento, come le
@@ -3520,7 +3525,7 @@ function renderTracciamento() {
 // seguirlo. Il punto di partenza (senza precedente) non ha freccia
 function rigaTracciamento(p, prec) {
   const bil = p.bilancio == null ? "" :
-    `<div class="sotto-bilancio">${p.bilancio >= 0 ? "+" : "−"} ${eur(Math.abs(p.bilancio))}${p.aperto ? " · fino a oggi" : ""}</div>`;
+    `<div class="sotto-bilancio">${p.bilancio >= 0 ? "+" : "−"} ${eur(Math.abs(p.bilancio))}</div>`;
   const sale = prec != null && p.saldo >= prec;
   const freccia = prec == null ? "" :
     `<span class="${sale ? "verde" : "rosso"}">${icona(sale ? "freccia-su" : "freccia-giu")}</span>`;
@@ -3530,34 +3535,66 @@ function rigaTracciamento(p, prec) {
   </div>`;
 }
 
+// La proiezione all'indietro (richiesta di Daniele, 11 nov 2026): i periodi
+// PRIMA del punto di partenza non hanno un saldo noto, ma i movimenti sì.
+// Risalendo dal punto e togliendo il bilancio di ogni periodo si ricostruisce
+// il saldo che il conto DEVE aver avuto: è esatta se il punto è esatto e i
+// movimenti completi, e per questo si disegna grigia e tratteggiata, come
+// «coerente coi dati, ma non giurata». Si ferma al primo movimento: prima
+// di lui non c'è nulla da ricostruire. Solo per il grafico: la sintesi e
+// gli aggiustamenti non la vedono
+function proiezioneTracciamento(catena) {
+  if (!catena.length) return [];
+  const periodi = periodiTracciamento();
+  const i0 = periodi.findIndex(p => p.inizio === catena[0].inizio);
+  if (i0 <= 0) return [];   // il punto è sul primo periodo: niente indietro
+  const indietro = [];
+  let saldo = catena[0].saldo;
+  for (let i = i0 - 1; i >= 0; i--) {
+    saldo = arrotonda(saldo - bilancioTra(periodi[i + 1].inizio, periodi[i + 1].fine));
+    indietro.unshift({...periodi[i], saldo});
+  }
+  return indietro;
+}
+
 /* ---- Il grafico: una linea sola (il saldo), asse x per periodi.
    Pallini alle chiusure, punto vivo sull'aperto. L'asse dice il numero
    del mese; al cambio d'anno "m/aa" e una riga verticale tratteggiata,
-   solo lì. La scala copre TUTTI i saldi, negativi compresi (due lati).
-   Oltre 12 periodi il disegno si allarga e il pan è lo scorrimento
-   nativo del contenitore: niente riconoscitori scritti a mano ---- */
+   solo lì. La scala copre TUTTI i saldi, proiezione e negativi compresi
+   (due lati). Oltre 12 periodi il disegno si allarga e il pan è lo
+   scorrimento nativo del contenitore: niente riconoscitori scritti a mano ---- */
 function graficoTracciamento(catena) {
   const L = 10, S = 16, F = 20, H = 170, PASSO = 26, LARGO = 344;
-  const n = catena.length;
+  // Il disegno completo: la proiezione grigia davanti, poi i periodi reali
+  // (gli unici con le scritte dei saldi e i pallini in accento)
+  const proiezione = proiezioneTracciamento(catena);
+  const disegno = proiezione.map(p => ({...p, proiettato: true})).concat(catena);
+  const n = disegno.length, re = proiezione.length;   // da qui in poi: periodi reali
   const largo = n < 12 ? LARGO : L * 2 + (n - 1) * PASSO;
   const passo = n > 1 ? (largo - 2 * L) / (n - 1) : 0;
   const x = i => L + i * passo;
-  const saldi = catena.map(p => p.saldo);
-  let max = Math.max(0, ...saldi), min = Math.min(0, ...saldi);
-  if (max === min) { max += 1; min -= 1; }   // un solo saldo: la scala respira
+  const saldi = disegno.map(p => p.saldo);
+  // Il pavimento della scala (richiesta di Daniele): l'asse sale sempre
+  // almeno a 10.000 €, così i periodi poveri non gonfiano le oscillazioni
+  let max = Math.max(10000, ...saldi), min = Math.min(0, ...saldi);
   const y = v => S + (max - v) / (max - min) * (H - S - F);
   let g = `<div class="scorrimento-traccia" onscroll="segnaPanTraccia()">
     <svg class="grafico-traccia" width="${largo}" height="${H}" viewBox="0 0 ${largo} ${H}" role="img" aria-label="Andamento del saldo">`;
   if (min < 0) g += `<line x1="${L}" y1="${y(0).toFixed(1)}" x2="${largo - L}" y2="${y(0).toFixed(1)}" stroke="var(--bordo)" stroke-dasharray="3 3"/>`;
-  g += `<polyline points="${catena.map((p, i) => x(i).toFixed(1) + "," + y(p.saldo).toFixed(1)).join(" ")}" style="stroke:var(--accento)"/>`;
-  catena.forEach((p, i) => {
+  // La proiezione (grigia e tratteggiata, v. CSS) tocca il punto del periodo
+  // del punto di partenza: il suo ultimo punto è il primo della linea reale
+  if (re) g += `<polyline class="proiezione" points="${disegno.slice(0, re + 1).map((p, i) => x(i).toFixed(1) + "," + y(p.saldo).toFixed(1)).join(" ")}"/>`;
+  g += `<polyline points="${disegno.slice(re).map((p, i) => x(re + i).toFixed(1) + "," + y(p.saldo).toFixed(1)).join(" ")}" style="stroke:var(--accento)"/>`;
+  disegno.forEach((p, i) => {
     const d = new Date(p.inizio + "T12:00:00");
-    const cambio = i > 0 && d.getFullYear() !== new Date(catena[i - 1].inizio + "T12:00:00").getFullYear();
+    const cambio = i > 0 && d.getFullYear() !== new Date(disegno[i - 1].inizio + "T12:00:00").getFullYear();
     if (cambio) g += `<line x1="${x(i).toFixed(1)}" y1="${S - 4}" x2="${x(i).toFixed(1)}" y2="${H - F + 4}" stroke="var(--bordo)" stroke-dasharray="3 3"/>`;
     g += `<text x="${x(i).toFixed(1)}" y="${H - 6}" text-anchor="middle">${d.getMonth() + 1}${cambio ? "/" + String(d.getFullYear()).slice(2) : ""}</text>`;
   });
-  catena.forEach((p, i) => {
-    g += p.aperto
+  disegno.forEach((p, i) => {
+    if (p.proiettato)   // pallino grigino e piccolo: presente ma non garantito
+      g += `<circle cx="${x(i).toFixed(1)}" cy="${y(p.saldo).toFixed(1)}" r="2.5" class="punto-proiettato"/>`;
+    else g += p.aperto
       ? `<circle cx="${x(i).toFixed(1)}" cy="${y(p.saldo).toFixed(1)}" r="4" style="fill:var(--accento)" class="punto-vivo"/>`
       : `<circle cx="${x(i).toFixed(1)}" cy="${y(p.saldo).toFixed(1)}" r="3" style="fill:var(--accento)"/>`;
   });
@@ -3566,25 +3603,26 @@ function graficoTracciamento(catena) {
      periodo è il riferimento fisso: si vede SEMPRE, in accento, e gli altri
      si posizionano attorno a lui, da sinistra a destra, sopra o sotto il
      proprio punto; chi non trova posto in nessuna delle due si nasconde.
-     Solo interi e SENZA il punto delle migliaia (richiesta di Daniele:
-     fa confusione, il numero semplice si legge meglio); larghezza stimata
-     prudente, come le etichette del flusso */
+     SOLO sui periodi reali: sulla proiezione sarebbero una precisione
+     che non c'è. Solo interi e SENZA il punto delle migliaia (richiesta
+     di Daniele: fa confusione, il numero semplice si legge meglio);
+     larghezza stimata prudente, come le etichette del flusso */
   const intero = v => String(Math.round(v));
   const lar = s => s.length * 5.4 + 4;
   const posate = [];   // le scritte già al loro posto
   const scrivi = (i, sopra, ultimo) => {
-    const cx = x(i), cy = y(catena[i].saldo), w = lar(intero(catena[i].saldo));
+    const cx = x(i), cy = y(disegno[i].saldo), w = lar(intero(disegno[i].saldo));
     const ty = sopra ? cy - 9 : cy + 16;   // solo interi, e un filo più lontano dal puntino
     const y1 = sopra ? cy - 18 : cy + 8, y2 = sopra ? cy - 8 : cy + 18;
     if (y1 < S - 6 || y2 > H - 10) return false;   // fuori dal disegno o addosso all'asse dei mesi
     if (posate.some(b => Math.abs(b.x - cx) < (b.w + w) / 2 && y1 < b.y2 && y2 > b.y1)) return false;
     posate.push({x: cx, y1, y2, w});
-    g += `<text x="${cx.toFixed(1)}" y="${ty.toFixed(1)}" text-anchor="middle"${ultimo ? ' style="fill:var(--accento)"' : ""}>${intero(catena[i].saldo)}</text>`;
+    g += `<text x="${cx.toFixed(1)}" y="${ty.toFixed(1)}" text-anchor="middle"${ultimo ? ' style="fill:var(--accento)"' : ""}>${intero(disegno[i].saldo)}</text>`;
     return true;
   };
-  const cima = y(catena[n - 1].saldo) - 18 >= S - 6;   // il riferimento: sopra se ci sta, altrimenti sotto
+  const cima = y(disegno[n - 1].saldo) - 18 >= S - 6;   // il riferimento: sopra se ci sta, altrimenti sotto
   if (!scrivi(n - 1, cima, true)) scrivi(n - 1, !cima, true);
-  for (let i = 0; i < n - 1; i++) if (!scrivi(i, true, false)) scrivi(i, false, false);
+  for (let i = re; i < n - 1; i++) if (!scrivi(i, true, false)) scrivi(i, false, false);
   return g + `</svg></div>`;
 }
 
