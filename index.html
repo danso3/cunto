@@ -15,7 +15,7 @@
 <!-- Favicon: il disegno di Daniele (il registro con la moneta €), vestito
      coi colori dell'app dal 12 nov 2026: costina blu accento, corpo carta,
      contorni del colore del testo, monetina ambra -->
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect x='0' y='0' width='512' height='512' fill='%234f5f70'/><rect x='152' y='152' width='204' height='236' rx='20' fill='%23f2f5f8' stroke='%231b2631' stroke-width='16'/><line x1='192' y1='166' x2='192' y2='374' stroke='%232b5f9e' stroke-width='18' stroke-linecap='round'/><line x1='232' y1='214' x2='336' y2='214' stroke='%231b2631' stroke-width='13' stroke-linecap='round'/><line x1='232' y1='262' x2='336' y2='262' stroke='%231b2631' stroke-width='13' stroke-linecap='round'/><line x1='232' y1='310' x2='336' y2='310' stroke='%231b2631' stroke-width='13' stroke-linecap='round'/><line x1='232' y1='358' x2='292' y2='358' stroke='%231b2631' stroke-width='13' stroke-linecap='round'/><circle cx='352' cy='176' r='58' fill='%23f2c14e' stroke='%231b2631' stroke-width='14'/><line x1='352' y1='146' x2='352' y2='206' stroke='%231b2631' stroke-width='11' stroke-linecap='round'/><line x1='341' y1='158' x2='363' y2='158' stroke='%231b2631' stroke-width='10' stroke-linecap='round'/><line x1='341' y1='194' x2='363' y2='194' stroke='%231b2631' stroke-width='10' stroke-linecap='round'/></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect x='0' y='0' width='512' height='512' fill='%234f5f70'/><rect x='152' y='152' width='204' height='236' rx='20' fill='%23f2f5f8' stroke='%231b2631' stroke-width='16'/><path d='M172 160H201V380H172A12 12 0 0 1 160 368V172A12 12 0 0 1 172 160Z' fill='%231d4e9e'/><line x1='192' y1='166' x2='192' y2='374' stroke='%231b2631' stroke-width='18' stroke-linecap='round'/><line x1='232' y1='214' x2='336' y2='214' stroke='%231b2631' stroke-width='13' stroke-linecap='round'/><line x1='232' y1='262' x2='336' y2='262' stroke='%231b2631' stroke-width='13' stroke-linecap='round'/><line x1='232' y1='310' x2='336' y2='310' stroke='%231b2631' stroke-width='13' stroke-linecap='round'/><line x1='232' y1='358' x2='292' y2='358' stroke='%231b2631' stroke-width='13' stroke-linecap='round'/><circle cx='352' cy='176' r='58' fill='%23f2c14e' stroke='%231b2631' stroke-width='14'/><line x1='352' y1='146' x2='352' y2='206' stroke='%231b2631' stroke-width='11' stroke-linecap='round'/><line x1='341' y1='158' x2='363' y2='158' stroke='%231b2631' stroke-width='10' stroke-linecap='round'/><line x1='341' y1='194' x2='363' y2='194' stroke='%231b2631' stroke-width='10' stroke-linecap='round'/></svg>">
 <!-- Il pacchetto PWA: dichiarato quando l'app è pubblicata su un sito.
      In anteprima o da file locale i file non ci sono e non succede nulla -->
 <link rel="manifest" href="manifest.webmanifest">
@@ -282,6 +282,10 @@
                         view-timeline-inset: auto calc(48px + env(safe-area-inset-bottom, 0px)); }
   .kpi { animation-name: riepilogo-si-fonde; animation-timeline: scroll(root);
          animation-fill-mode: both; animation-range: 4px 12px; }
+  /* Col filtro attivo il banner sta in mezzo (testa fissa): il riepilogo non
+     tocca più il corpo che scorre, quindi niente giunzione da fare
+     (richiesta di Daniele, 17 nov 2026) */
+  .kpi.senza-fusione { animation-name: none; }
   .corpo { animation-name: corpo-cima-si-fonde, fusione-fondo-basso;
            animation-timeline: scroll(root), --incontro-fascia;
            animation-fill-mode: both;
@@ -641,12 +645,17 @@
      (copre tanti giorni insieme, non c'è niente da aprire); le righe dei
      giorni con le spese, invece, filtrano come quelle delle categorie */
   .riga-statica { cursor: default; }
+  /* Il banner del filtro è FISSO (richiesta di Daniele, 12 nov 2026): sta
+     nella testa fissa, sotto il riepilogo, e non scorre via. I risultati
+     passano SOTTO senza mai toccarlo: il velo di cielo (.coda-fissa) si
+     estende 12px sotto la pillola (padding) e copre ciò che passa, tagliato
+     lì; il margine negativo uguale riporta a riposo il corpo a 12px dalla
+     pillola, com'era prima della fissazione */
+  .coda-fissa { margin-top: 12px; padding-bottom: 12px; margin-bottom: -12px; background: var(--sfondo); }
   .banner-filtro {
     display: flex; align-items: center; justify-content: space-between; gap: 8px;
     background: var(--tenue); border-radius: 999px;
-    padding-left: 14px; margin: 12px 12px 12px; font-size: 14px; font-weight: 600; color: var(--accento);
-    /* il margine sotto eguaglia quello sopra (12px fino alla fascia): la
-       voce del filtro non sta attaccata ai movimenti che filtra */
+    padding-left: 14px; margin: 0 12px; font-size: 14px; font-weight: 600; color: var(--accento);
   }
   .banner-filtro span { display: flex; align-items: center; gap: 6px; min-width: 0; }
   .banner-filtro button { background: none; border: none; color: var(--accento); font-size: 18px; padding: 12px 16px; }
@@ -1446,6 +1455,7 @@ function render() {
       ${sospeso}
     </div>
     ${pagina.kpi}
+    ${pagina.banner || ""}
     </div>
     <div class="pagina-corpo${dir ? " " + dir : ""}">${pagina.corpo}</div>
     <div class="sentinella-fusione"></div>
@@ -1501,12 +1511,14 @@ function vai(pagina) {
 }
 
 // Fascia 2: riepilogo a 3 caselle (o 2 nella pagina Budget)
-function kpiHtml(ms) {
+// fusione=false (filtro attivo: il banner sta in mezzo) spegne l'animazione
+// che squadra gli angoli bassi a contatto col corpo: non toccano più niente
+function kpiHtml(ms, fusione = true) {
   if (ms === null) {   // variante Budget: budget totale / budget speso
     let totale = 0, speso = 0;
     const mp = movimentiNelPeriodo();
     for (const b of dati.budget) { totale += b.limite; speso += spesaBudget(b, mp); }
-    return `<div class="kpi kpi2">
+    return `<div class="kpi kpi2${fusione ? "" : " senza-fusione"}">
       <div class="casella"><div class="titolo">Budget totale</div><div class="valore neutro">${eur(arrotonda(totale))}</div></div>
       <div class="casella"><div class="titolo">Budget speso</div><div class="valore neutro">${eur(arrotonda(speso))}</div></div>
     </div>`;
@@ -1514,7 +1526,7 @@ function kpiHtml(ms) {
   let entrate = 0, uscite = 0;
   for (const m of ms) m.tipo === "entrata" ? entrate += m.importo : uscite += m.importo;
   const bilancio = arrotonda(entrate - uscite);
-  return `<div class="kpi">
+  return `<div class="kpi${fusione ? "" : " senza-fusione"}">
     <div class="casella"><div class="titolo">Entrate</div><div class="valore verde">+ ${eur(entrate)}</div></div>
     <div class="casella"><div class="titolo">Uscite</div><div class="valore rosso">− ${eur(uscite)}</div></div>
     <div class="casella"><div class="titolo">Bilancio</div><div class="valore ${bilancio >= 0 ? "verde" : "rosso"}">${bilancio >= 0 ? "+" : "−"} ${eur(Math.abs(bilancio))}</div></div>
@@ -1550,7 +1562,7 @@ function renderMovimenti() {
   if (!ms.length) lista = `<div class="vuoto">${speseProgrammate()
     ? "Nessuna spesa programmata per ora." : "Nessun movimento in questo periodo."}</div>`;
 
-  return {kpi: kpiHtml(ms), corpo: banner + `<div class="corpo">${lista}</div>`};
+  return {kpi: kpiHtml(ms, !banner), banner, corpo: `<div class="corpo">${lista}</div>`};
 }
 
 // Un movimento corrisponde al filtro categoria/conto/giorno/budget attivo?
@@ -1604,8 +1616,8 @@ function bannerFiltro() {
     const co = conto(Number(f.id));
     ico = icona(co ? co.icona : "portafoglio"); nome = co ? co.nome : "Conto";
   }
-  return `<div class="banner-filtro"><span>${ico} ${esc(nome)}</span>
-    <button onclick="togliFiltro()" aria-label="Togli filtro">✕</button></div>`;
+  return `<div class="coda-fissa"><div class="banner-filtro"><span>${ico} ${esc(nome)}</span>
+    <button onclick="togliFiltro()" aria-label="Togli filtro">✕</button></div></div>`;
 }
 
 let nuovoMov = null;   // l'ultimo movimento salvato: per l'entrata animata
